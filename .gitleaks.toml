@@ -1,0 +1,11 @@
+# WE Sign: the secret scan's configuration (gitleaks). Gitleaks' own rules, plus findings that were looked at
+# and are not live secrets. Fingerprints tied to a commit stay in .gitleaksignore.
+[extend]
+useDefault = true
+
+# Upstream's API settings page shows a curl example whose token is the literal placeholder API_TOKEN.
+[[allowlists]]
+description = "placeholder API_TOKEN in the API help page"
+condition = "AND"
+paths = ['''^app/views/api_settings/index\.html\.erb$''']
+regexes = ['''^API_TOKEN$''']
