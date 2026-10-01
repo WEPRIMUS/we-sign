@@ -1,0 +1,198 @@
+---
+name: CI
+on: [push]
+
+jobs:
+  rubocop:
+    name: Rubocop
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 4.0.5
+      - name: Cache gems
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gem-
+      - name: Install gems
+        run: |
+          gem install bundler
+          bundle config path vendor/bundle
+          bundle install --jobs 4 --retry 4
+      - name: Run RuboCop
+        run: bundle exec rubocop
+
+  erblint:
+    name: Erblint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 4.0.5
+      - name: Cache gems
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gem-
+      - name: Install gems
+        run: |
+          gem install bundler
+          bundle config path vendor/bundle
+          bundle install --jobs 4 --retry 4
+      - name: Run Erblint
+        run: bundle exec erb_lint ./app
+
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 20.19.0
+      - name: Cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Install dependencies
+        run: |
+          yarn install
+      - name: Run eslint
+        run: |
+          ./node_modules/eslint/bin/eslint.js "app/javascript/**/*.js"
+
+  brakeman:
+    name: Brakeman
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 4.0.5
+      - name: Cache gems
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gem-
+      - name: Install gems
+        run: |
+          gem install bundler
+          bundle config path vendor/bundle
+          bundle install --jobs 4 --retry 4
+          yarn install
+          sudo apt-get update
+          sudo apt-get install libvips liblept5
+      - name: Run Brakeman
+        run: bundle exec brakeman -q --exit-on-warn
+
+  # WE Sign (SEC-SHP-04): known advisories against the two lockfiles. Fails when any is found.
+  dependency_audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit Gemfile.lock and yarn.lock (osv-scanner)
+        run: |
+          docker run --rm -v "$PWD":/src:ro \
+            ghcr.io/google/osv-scanner:v2.6.0@sha256:afd838850ac1a0fcc15ff4a041dc9ba11123c3f0d2666217a5f0fcf9222b55fa \
+            scan source --lockfile /src/Gemfile.lock --lockfile /src/yarn.lock
+
+  # WE Sign (SEC-SHP-04): secrets in any commit of the history. Findings that were looked at and are not
+  # live secrets are listed, with the reason, in .gitleaksignore.
+  secret_scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan the history for secrets (gitleaks)
+        run: |
+          docker run --rm -v "$PWD":/src:ro --entrypoint sh \
+            ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            -c 'git config --global --add safe.directory /src && gitleaks git --redact --no-banner /src'
+
+  rspec:
+    name: RSpec
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: ruby:4.0.5-alpine
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: docuseal_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d docuseal_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Install packages
+        run: apk add --no-cache build-base git libpq-dev yaml-dev nodejs yarn tar zstd gzip wget unzip vips leptonica chromium
+      - uses: actions/checkout@v4
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-musl-node-${{ hashFiles('**/yarn.lock') }}
+      - name: Cache gems
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-musl-gem-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-musl-gem-
+      - name: Install dependencies
+        env:
+          RAILS_ENV: test
+        run: |
+          gem install bundler
+          bundle config path vendor/bundle
+          bundle install --jobs 4 --retry 4
+          yarn install
+          wget -O pdfium-linux.zip "https://github.com/docusealco/pdfium-binaries/releases/latest/download/pdfium-musl-$(uname -m).zip"
+          unzip -q pdfium-linux.zip -d /tmp/pdfium-linux
+          cp /tmp/pdfium-linux/lib/libpdfium.so /usr/lib/libpdfium.so
+          rm -rf pdfium-linux.zip /tmp/pdfium-linux
+      - name: Run
+        env:
+          RAILS_ENV: test
+          NODE_ENV: test
+          COVERAGE: true
+          DATABASE_URL: postgres://postgres:postgres@postgres:5432/docuseal_test
+        run: |
+          bundle exec rake db:create
+          bundle exec rake db:migrate
+          bundle exec rake assets:precompile
+          bundle exec rspec

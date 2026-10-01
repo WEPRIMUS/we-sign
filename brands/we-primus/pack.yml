@@ -1,0 +1,21 @@
+# WE Sign brand pack "we-primus": the product's default look (README.md, "Brand packs").
+
+# Shown as the alternative text of the logo.
+public_name: WE PRIMUS
+
+# What the in-app headers show (staff, signer, start-form and QR pages, header of the audit PDF): logo_and_name
+# (the default), logo or name. The product's own pack shows the product name alone; its sign-in panel keeps the
+# logo with the name.
+header: name
+
+# One line under the attribution line of staff and signer pages: the same size and colour, centred, plain text.
+footer_credit: WE PRIMUS
+
+# The builder's signature in the bottom-right corner of the sign-in photograph, with the support address under it.
+# Off here, where the whole page is WE PRIMUS; every pack made for a client carries it:
+# builder_credit: WE PRIMUS
+# support_email: support@we-primus.com
+
+# The page colour, as a hex value: the browser's toolbar, the web app manifest, the bands of the audit PDF.
+# The same colour as --b1 in theme.css.
+page_color: "#f6f8f2"

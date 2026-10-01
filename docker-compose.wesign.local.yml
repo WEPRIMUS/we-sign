@@ -1,0 +1,164 @@
+# WE Sign (DocuSeal base) - local trial stack, loopback only.
+#
+#   docker compose --env-file .env.wesign.local -f docker-compose.wesign.local.yml up -d --build
+#
+# App:   https://127.0.0.1:3141     (the one published app port, through Caddy, with Caddy's own local certificate)
+# Mail:  http://127.0.0.1:8141      (Mailpit catches every outgoing e-mail; nothing leaves this machine)
+# The database and the app's own port 3000 are NOT published to the host. Plain HTTP on 3141 is redirected to HTTPS.
+# Secrets live in .env.wesign.local (gitignored). The app image is built from this repository's
+# own Dockerfile, never the vendor's docuseal/docuseal image.
+# No host folder is mounted into any container: data is in named volumes (Caddy's local CA too), and the two small
+# configuration files (Caddyfile, database init script) are written inline at the end of this file.
+
+name: wesign-ds
+
+services:
+  wesign-ds-postgres:
+    image: postgres:18.6                   # exact minor, never a floating tag
+    container_name: wesign-ds-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${WESIGN_DB_SUPERUSER_PASSWORD:?missing in .env.wesign.local}
+      WESIGN_DB_APP_PASSWORD: ${WESIGN_DB_APP_PASSWORD:?missing in .env.wesign.local}
+    volumes:
+      - wesign_ds_pg_data:/var/lib/postgresql
+    configs:
+      - source: wesign_ds_pg_init
+        target: /docker-entrypoint-initdb.d/10-wesign-app-role.sh
+    networks: [wesign_ds_net]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "wesign_app", "-d", "wesign"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  wesign-ds-mailpit:
+    image: axllent/mailpit:v1.31.3
+    container_name: wesign-ds-mailpit
+    restart: unless-stopped
+    environment:
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "127.0.0.1:8141:8025"              # web UI, loopback only (SMTP :1025 stays inside the network)
+    volumes:
+      - wesign_ds_mailpit_data:/data
+    networks: [wesign_ds_net]
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wesign-ds-app:
+    build:
+      context: .
+    image: wesign-ds/app:local
+    container_name: wesign-ds-app
+    restart: unless-stopped
+    user: "2000:2000"                      # the image's unprivileged docuseal user
+    environment:
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?missing in .env.wesign.local}
+      DATABASE_URL: postgresql://wesign_app:${WESIGN_DB_APP_PASSWORD}@wesign-ds-postgres:5432/wesign
+      APP_URL: ${APP_URL:?missing in .env.wesign.local}   # public address; links in e-mails are built from it
+      SMTP_ADDRESS: wesign-ds-mailpit
+      SMTP_PORT: "1025"
+      SMTP_ENABLE_STARTTLS: "false"        # Mailpit speaks plain SMTP inside the compose network
+      SMTP_FROM: ${SMTP_FROM:?missing in .env.wesign.local}
+      FORCE_SSL: "true"                    # behind TLS: links are https, cookies Secure (README.md, "Run it with Docker")
+      BRAND: ${BRAND:-we-primus}                     # the brand pack: a folder under brands/ (lib/brand.rb)
+      PRODUCT_NAME: ${PRODUCT_NAME:-WE Sign}         # the one naming setting (lib/docuseal.rb)
+      SOURCE_CODE_URL: ${SOURCE_CODE_URL:-}          # empty = the default in lib/docuseal.rb
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@wesign.test}
+    volumes:
+      - wesign_ds_app_data:/data/docuseal  # uploaded and signed documents, embedded redis dump
+    networks: [wesign_ds_net]
+    depends_on:
+      wesign-ds-postgres:
+        condition: service_healthy
+      wesign-ds-mailpit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  wesign-ds-proxy:
+    image: caddy:2.11.4
+    container_name: wesign-ds-proxy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3141:3141"              # the one app port, bound to loopback only
+    configs:
+      - source: wesign_ds_caddyfile
+        target: /etc/caddy/Caddyfile
+    volumes:
+      - wesign_ds_caddy_data:/data         # Caddy's local CA and certificate: the same one after every restart
+    networks: [wesign_ds_net]
+    depends_on:
+      wesign-ds-app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--no-check-certificate", "-O", "/dev/null", "https://127.0.0.1:3141/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+configs:
+  # Caddyfile: HTTPS on one loopback port in front of the app, with a certificate from Caddy's own local CA
+  # (kept in the volume wesign_ds_caddy_data). The CA is not installed in any trust store: the browser warns once.
+  # Browsers send no server name for an IP address, hence default_sni. A plain-HTTP request to the port is
+  # answered with a redirect to HTTPS (http_redirect). The address is 127.0.0.1, never localhost.
+  wesign_ds_caddyfile:
+    content: |
+      {
+        admin off
+        skip_install_trust
+        default_sni 127.0.0.1
+        auto_https disable_redirects
+        pki {
+          ca local {
+            intermediate_lifetime 1825d
+          }
+        }
+        servers :3141 {
+          listener_wrappers {
+            http_redirect
+            tls
+          }
+        }
+      }
+
+      https://127.0.0.1:3141 {
+        tls {
+          issuer internal {
+            lifetime 365d
+          }
+        }
+        reverse_proxy wesign-ds-app:3000
+      }
+
+  # Run once by the postgres image when the database volume is first created. Creates the application
+  # role (not a superuser, cannot create roles or databases) and the one database it owns, so migrations
+  # run without superuser rights. ($$ is a literal $ for the shell inside the container.)
+  wesign_ds_pg_init:
+    content: |
+      psql -v ON_ERROR_STOP=1 --username postgres --dbname postgres -v app_password="$$WESIGN_DB_APP_PASSWORD" <<'SQL'
+      CREATE ROLE wesign_app LOGIN PASSWORD :'app_password' NOSUPERUSER NOCREATEROLE NOCREATEDB;
+      CREATE DATABASE wesign OWNER wesign_app;
+      SQL
+
+networks:
+  wesign_ds_net:
+    name: wesign_ds_net
+
+volumes:
+  wesign_ds_pg_data:
+    name: wesign_ds_pg_data
+  wesign_ds_app_data:
+    name: wesign_ds_app_data
+  wesign_ds_mailpit_data:
+    name: wesign_ds_mailpit_data
+  wesign_ds_caddy_data:
+    name: wesign_ds_caddy_data

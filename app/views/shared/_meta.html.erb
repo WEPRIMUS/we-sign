@@ -1,0 +1,40 @@
+<% if Docuseal.demo? || (request.path != '/' && !devise_controller?) %>
+  <meta name="robots" content="noindex">
+<% end %>
+<% title = content_for(:html_title) || (signed_in? ? Docuseal.product_name : "#{Docuseal.product_name} | #{t('wesign.tagline')}") %>
+<% description = content_for(:html_description) || 'Open source, self-hosted tool to streamline document filling and signing. Create custom PDF forms to complete and sign with an easy to use online tool.' %>
+<meta name="description" content="<%= description %>">
+<meta property="og:title" content="<%= title %>">
+<meta property="og:description" content="<%= description %>">
+<meta property="og:type" content="website">
+<meta property="og:url" content="<%= root_url %>">
+<meta property="og:site_name" content="<%= Docuseal.product_name %>">
+<% if content_for(:disable_image_preview) %>
+  <meta property="og:image" content="">
+  <meta name="twitter:image" content="">
+<% else %>
+  <meta property="og:image" content="<%= content_for(:preview_image_url).presence || "#{root_url.chomp('/')}#{Brand.url('icon-512.png')}" %>">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta name="twitter:image" content="<%= content_for(:preview_image_url).presence || "#{root_url.chomp('/')}#{Brand.url('icon-512.png')}" %>">
+<% end %>
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="<%= title %>">
+<meta name="twitter:description" content="<%= description %>">
+<%# WE Sign: icons, page colour and stylesheet of the selected brand pack (lib/brand.rb). The stylesheet holds the
+    theme variables every page and both bundles read; brand-mark is the logo of the template builder. %>
+<link rel="apple-touch-icon" sizes="180x180" href="<%= Brand.url('apple-touch-icon.png') %>">
+<% if Brand.file?('favicon-16.png') %>
+  <link rel="icon" type="image/png" sizes="16x16" href="<%= Brand.url('favicon-16.png') %>">
+<% end %>
+<% if Brand.file?('favicon-32.png') %>
+  <link rel="icon" type="image/png" sizes="32x32" href="<%= Brand.url('favicon-32.png') %>">
+<% end %>
+<link rel="icon" type="image/png" sizes="192x192" href="<%= Brand.url('icon-192.png') %>">
+<meta name="theme-color" content="<%= Brand.page_color %>">
+<link rel="stylesheet" href="<%= Brand.url('theme.css') %>">
+<meta name="brand-mark" content="<%= Brand.url(Brand.file?('mark.png') ? 'mark.png' : 'logo-light.png') %>" data-alt="<%= Brand.public_name %>">
+<meta name="source-code-url" content="<%= Docuseal::SOURCE_CODE_URL %>">
+<% if Brand.footer_credit %>
+  <meta name="footer-credit" content="<%= Brand.footer_credit %>">
+<% end %>

@@ -1,0 +1,60 @@
+<%# WE Sign: layout of the staff sign-in, two-factor, password-reset and invitation pages. Rails picks it for
+    every Devise controller by its name; no controller refers to it. The photograph is the brand pack's
+    login-photo-<width>.webp, one picture at three widths (the browser takes the smallest that is sharp on its
+    screen); a pack without one gets the plain page. The page styles are the "we-auth" rules in
+    app/javascript/brand/brand.scss.
+    Signer-facing pages do not use this layout. %>
+<!DOCTYPE html>
+<html data-theme="docuseal" lang="<%= I18n.locale %>">
+  <head>
+    <%= render 'layouts/head_tags' %>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <%= csrf_meta_tags %>
+    <%= javascript_pack_tag 'application', defer: true %>
+    <%= stylesheet_pack_tag 'application', media: 'all', data: { turbo_track: 'dynamic' } %>
+    <% if controller_name == 'sessions' && Brand.file?('opening.mp4') %>
+      <%# the pack's opening film, played once after a successful sign-in (app/javascript/brand/opening.js) %>
+      <meta name="brand-opening" content="<%= Brand.url('opening.mp4') %>" data-form="<%= user_session_path %>">
+    <% end %>
+  </head>
+  <% photo = Brand.file?('login-photo-1920.webp') %>
+  <% corner = photo && Brand.builder_credit %>
+  <body class="we-auth <%= 'we-auth-plain' unless photo %>">
+    <% if photo %>
+      <img class="we-auth-photo" alt=""
+           src="<%= Brand.url('login-photo-1920.webp') %>"
+           srcset="<%= [1920, 2560, 3840].map { |w| "#{Brand.url("login-photo-#{w}.webp")} #{w}w" }.join(', ') %>"
+           sizes="(min-width: 1024px) and (min-aspect-ratio: 5/4) max(100vw, 177vh), 100vw">
+    <% end %>
+    <main class="we-auth-panel">
+      <a href="<%= root_path %>" class="we-auth-brand">
+        <%= render 'shared/logo', height: 36 %>
+        <% unless Brand.logo_leads_alone? %><span><%= Docuseal.product_name %></span><% end %>
+      </a>
+      <% if flash.present? %><%= render 'shared/flash' %><% end %>
+      <%= yield %>
+      <% unless controller_name == 'sessions' %>
+        <div class="text-center mt-4"><%= link_to t('sign_in'), new_user_session_path, class: 'link link-hover' %></div>
+      <% end %>
+      <% if corner && Brand.support_email %>
+        <%# the support line of the corner below, where the narrow layout leaves the corner out %>
+        <div class="we-auth-support"><%= t('need_help_ask_a_question_') %> <%= mail_to Brand.support_email %></div>
+      <% end %>
+      <div class="we-auth-credit"><%= render 'shared/powered_by', with_source: false %></div>
+    </main>
+    <% if corner %>
+      <%# the builder's signature in the bottom-right corner of the photograph: its name, or its logo with the name as
+          the alternative text, never a link (pack.yml: builder_credit, builder_logo, support_email) %>
+      <div class="we-auth-builder">
+        <% if Brand.builder_logo %>
+          <img class="we-auth-builder-logo" src="<%= Brand.url(Brand.builder_logo) %>" alt="<%= Brand.builder_credit %>">
+        <% else %>
+          <div><%= Brand.builder_credit %></div>
+        <% end %>
+        <% if Brand.support_email %>
+          <div><%= t('need_help_ask_a_question_') %> <%= mail_to Brand.support_email %></div>
+        <% end %>
+      </div>
+    <% end %>
+  </body>
+</html>

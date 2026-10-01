@@ -1,0 +1,13 @@
+<% unless turbo_native_ios? %>
+  <div class="alert">
+    <%= svg_icon('info_circle', class: 'w-6 h-6') %>
+    <div>
+      <p class="font-bold">
+        <%= t('api_and_embedding') %>
+      </p>
+      <p class="text-gray-700">
+        <%= t('wesign.not_in_this_edition') %>
+      </p>
+    </div>
+  </div>
+<% end %>

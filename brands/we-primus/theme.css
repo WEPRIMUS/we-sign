@@ -1,0 +1,46 @@
+/* WE Sign brand pack "we-primus": colours, font and corners of the WE PRIMUS product palette
+   (brand kit: SESSION-BRAND-CONTRACT.md and tokens/we-primus-tokens.css).
+   Linked on every page. The selector is html:root so that it wins over the defaults built into the bundle. */
+
+/* Onest, variable weight 100-900, Latin subset; other scripts fall back to the system fonts.
+   Licence beside this file: OFL-Onest.txt. */
+@font-face {
+  font-family: "Onest";
+  src: url("onest-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+html:root {
+  /* Theme colours, written as "H S% L%" (hue, saturation, lightness: no hsl(), no commas).
+     -f is the same colour on hover, -c the text on it. */
+  --p: 83 73% 57%;   --pf: 83 73% 50%;   --pc: 175 54% 9%;    /* primary: light green #A6E243, dark teal text */
+  --s: 170 15% 23%;  --sf: 170 15% 16%;  --sc: 80 43% 99%;    /* secondary: slate #324441, paper text */
+  --a: 39 75% 60%;   --af: 39 75% 53%;   --ac: 175 54% 9%;    /* accent: amber #e6b14e */
+  --n: 175 54% 9%;   --nf: 175 54% 2%;   --nc: 80 43% 99%;    /* main buttons: dark teal #0B2523, paper text */
+  --b1: 80 30% 96%;                                           /* the page: canvas #f6f8f2 */
+  --b2: 56 32% 91%;                                           /* panels and cards: warm paper #f0efe2 */
+  --b3: 115 24% 89%;                                          /* lines, hover: sage #deeadd */
+  --bc: 176 57% 10%;                                          /* text: ink #0b2826 */
+  --in: 198 89% 46%; --inc: 175 54% 9%;                       /* information: blue #0da1de */
+  --su: 83 73% 57%;  --suc: 175 54% 9%;                       /* success: light green */
+  --wa: 39 75% 60%;  --wac: 175 54% 9%;                       /* warning: amber */
+  --er: 12 84% 64%;  --erc: 175 54% 9%;                       /* error: coral #f07456, a fill, never text */
+
+  /* The rest: --brand-soft* are "H S% L%" like the theme colours, the other colours "R G B". */
+  --brand-font: "Onest";
+  --brand-bold: 700;                /* bold on the sign-in pages (inside the app: the shared 600) */
+  --brand-radius: 4px;              /* corners on the sign-in pages outside the glass (inside the app: the shared 8px and 12px) */
+  --brand-soft: 115 24% 89%;        /* secondary buttons: sage #deeadd, dark teal text */
+  --brand-soft-hover: 115 24% 83%;  /* the same, a step deeper on hover */
+  --brand-soft-content: 175 54% 9%; /* text on them */
+  --brand-line: rgb(11 40 38 / 0.2); /* hairline of fields: ink at 20%, the kit's border */
+  --brand-muted: 96 108 102;        /* secondary text #606c66 */
+  --brand-raised: 255 255 255;      /* raised surfaces: fields, cards, menus */
+  --brand-on-dark: 255 255 255;     /* text on the main buttons */
+  --brand-paper: 252 253 250;       /* sign-in page and panel where there is no glass: paper #fcfdfa */
+  --brand-shadow: 11 37 35;         /* shadow under the sign-in panel and the cards: dark teal */
+  --brand-glass-button: 0.5;         /* opacity of the sign-in button on the glass: dark teal on frosted light green,
+                                       9.0:1 where the button sits, 7.4:1 at the darkest spot of the panel */
+}

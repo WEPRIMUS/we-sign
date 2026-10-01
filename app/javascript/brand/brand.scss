@@ -1,0 +1,423 @@
+// WE Sign brand layer. Imported by application.scss and form.scss, after Tailwind, so these rules win.
+// Every colour, the font and the corner radius come from the stylesheet of the selected brand pack
+// (brands/<pack>/theme.css, linked in app/views/shared/_meta.html.erb): the daisyUI theme variables
+// (hsl(var(--bc)) is the text colour, --b1 the page, --p the primary colour) and the --brand-* variables.
+// Nothing here names a brand: one bundle serves every pack.
+
+// The modern layer (the owner, 30 Sep 2026): the product's own look inside the app, the same in every brand pack. A pack
+// sets only its colours (among them --brand-soft*, the tint of secondary actions, and --brand-line, the hairline of
+// fields), its font and its logos; it does not set these corners or weights. NOTICE-WE-SIGN.md records the decision.
+// The sign-in pages (body.we-auth) keep the look they were designed with: the pack's own corners and weight.
+:root {
+  --radius-control: 8px; // buttons, fields, badges, menus
+  --radius-box: 12px; // cards, panels, dialogs
+  --radius-full: 9999px; // avatars, toggles, pills, dots: round
+  --weight-bold: 600; // section titles and other bold text: SemiBold
+}
+
+// daisyUI's own variables are set again here, not only ours: a variable that refers to another one takes its value
+// where it is declared (on html), so --rounded-btn: var(--radius-control) would not follow the change below.
+.we-auth {
+  --radius-control: var(--brand-radius);
+  --radius-box: var(--brand-radius);
+  --radius-full: var(--brand-radius);
+  --weight-bold: var(--brand-bold);
+  --rounded-box: var(--brand-radius);
+  --rounded-btn: var(--brand-radius);
+  --rounded-badge: var(--brand-radius);
+  --tab-radius: var(--brand-radius);
+}
+
+// The main action of a screen stays solid: the submit button of a form (Save, Update, Send, Submit, Next, Sign,
+// Complete), Download of a completed document and the menu half of a split button, Send on a template ("Add
+// recipients"), Create on the dashboard, the "New ..." action beside a list's page title, Complete in the signer's
+// header, and the signer's "Sign now" / "Next" button while the step form is folded away. Every other button is soft.
+$main-action: 'button.base-button:not(.cancel-draw-button), input.base-button, download-button.base-button, ' +
+  '.dropdown > label.base-button, #send_to_recipients_button, #add_recipients_button, ' +
+  'a.white-button[href*="/templates/new"], :has(> h1) > a.btn-primary, .complete-button, #complete_form_button, ' +
+  '#expand_form_button';
+
+body:not(.we-auth) {
+  --btn-text-case: none;
+
+  // page titles one step lighter (the template builder's title is an editable field, not an h1); section titles stay
+  // SemiBold (font-bold)
+  h1,
+  .template-name {
+    font-weight: 500;
+  }
+
+  .btn,
+  .base-button,
+  .white-button {
+    font-weight: 500;
+  }
+
+  // Labels are shown as written. Two upstream strings are lower-case ("next", "submit") and relied on the uppercase.
+  .base-button span::first-letter {
+    text-transform: uppercase;
+  }
+
+  #expand_form_button {
+    text-transform: capitalize; // its labels are single words or already capitalised: "next", "Sign Now"
+  }
+
+  // Soft: a light tint of the pack's palette, text in the pack's colour, no border. Coloured outlines (error and the
+  // other signals, and a warning that asks for confirmation), ghost and link buttons, disabled buttons and the main
+  // action keep their own look. Upstream's warning colour also marks two invitations (Start tour, the API reference):
+  // those are soft. So is the grey preferences button of a template, which sits among soft ones.
+  // (ids are written as attribute selectors here, so that the rule does not take the weight of an id)
+  :is(.white-button, .base-button, .btn-neutral, .btn-primary, .btn-outline,
+    .btn-warning:not([data-turbo-confirm], [data-turbo-confirm] *), a.btn[href$="/preferences"],
+    [id="signing_form_header"] .btn, scroll-buttons .btn):not(:where(.btn-ghost, .btn-link, .btn-error, .btn-success,
+    .btn-info, .btn-accent, .btn-disabled, :disabled, #{$main-action})) {
+    border-color: transparent;
+    background-color: hsl(var(--brand-soft));
+    color: hsl(var(--brand-soft-content));
+
+    svg {
+      color: inherit; // the icons of the copy buttons are drawn in text-white
+    }
+
+    &:hover {
+      border-color: transparent;
+      background-color: hsl(var(--brand-soft-hover));
+      color: hsl(var(--brand-soft-content));
+    }
+  }
+
+  // Main actions that upstream draws as outlines or in the primary colour take the solid look of the main button.
+  :is([id="add_recipients_button"], a.white-button[href*="/templates/new"], :has(> h1) > a.btn-primary) {
+    border-color: hsl(var(--n));
+    background-color: hsl(var(--n));
+    color: rgb(var(--brand-on-dark));
+
+    &:hover {
+      border-color: hsl(var(--nf));
+      background-color: hsl(var(--nf));
+      color: rgb(var(--brand-on-dark));
+    }
+  }
+
+  // Round again: toggles (daisyUI draws them with the badge corner) and, with tailwind's rounded-full and daisyUI's
+  // btn-circle no longer squared, avatars, dots, pills and icon-only circle buttons. A checkbox keeps a small corner,
+  // so that it never reads as a radio button. Shapes upstream draws round but that are fields here (the phone number, a yes/no field of the
+  // recipients form, the first segment of a segmented control) take the corner of a field.
+  .toggle {
+    border-radius: var(--radius-full);
+  }
+
+  .checkbox {
+    border-radius: 4px;
+  }
+
+  .base-textarea {
+    border-radius: var(--radius-control);
+  }
+
+  .join-item,
+  .phone-number-input-container,
+  .country-code-select-label,
+  label.rounded-full:has(> .toggle) {
+    --radius-full: var(--radius-control);
+  }
+
+  .dropdown-content.menu {
+    border-radius: var(--radius-control);
+  }
+
+  // Fields: a raised fill, a hairline in the pack's line colour, a soft glow in the main colour on focus.
+  .input-bordered,
+  .select-bordered,
+  .textarea-bordered {
+    border-color: var(--brand-line);
+    background-color: rgb(var(--brand-raised));
+
+    &:focus,
+    &:focus-within {
+      outline: none;
+      border-color: hsl(var(--n));
+      box-shadow: 0 0 0 3px hsl(var(--n) / 0.15);
+    }
+  }
+
+  // Cards and panels: raised, a hairline and a soft shadow instead of a flat grey block. The signer's step panel too.
+  :is(.card, .collapse, .rounded-xl, .rounded-2xl, .rounded-3xl).bg-base-200:not(#templates_submissions_toggle),
+  .form-container {
+    border-color: transparent;
+    background-color: rgb(var(--brand-raised));
+    box-shadow: 0 0 0 1px hsl(var(--b3)), 0 1px 2px rgb(var(--brand-shadow) / 0.04),
+      0 8px 24px -12px rgb(var(--brand-shadow) / 0.16);
+  }
+
+  .form-container {
+    border-radius: var(--radius-box);
+  }
+}
+
+// Readable text. The signal colours are fills: as text on a light surface they can be as low as 1.5:1, and
+// the text colour at reduced opacity drops under 4.5:1 on the warm surface. Text uses the text colour or the
+// pack's muted tone; the signal colour stays on the border or the fill.
+.text-error, .text-success, .text-info, .text-warning, .text-accent {
+  color: hsl(var(--bc));
+}
+
+.text-base-content\/60, .menu-title {
+  color: rgb(var(--brand-muted));
+}
+
+@each $name, $var in (primary: --p, accent: --a, info: --in, success: --su, warning: --wa, error: --er) {
+  .badge-outline.badge-#{$name}, .btn-outline.btn-#{$name}:not(:hover) {
+    color: hsl(var(--bc));
+    border-color: hsl(var(#{$var}));
+  }
+}
+
+// Staff sign-in pages (app/views/layouts/devise.html.erb): the photograph fills the page and the form sits
+// on a glass panel at the left, clear of the tablet. On a phone, a narrow window or a tall one (where the
+// tablet and the panel cannot both fit) the photograph is a band at the top and the form is on plain paper.
+// A pack without a photograph gets a plain page: no picture, the panel in the middle (.we-auth-plain).
+.we-auth {
+  min-height: 100vh;
+  background: rgb(var(--brand-paper));
+}
+
+.we-auth-photo {
+  display: block;
+  width: 100%;
+  height: min(56.25vw, 18rem); // the whole 16:9 picture on a phone, a band on a tablet
+  object-fit: cover;
+  object-position: 50% 80%; // the band keeps the tablet and both hands
+}
+
+.we-auth-panel {
+  background: rgb(var(--brand-paper));
+  padding: 1.5rem 1.25rem 2rem;
+
+  h1 {
+    margin-top: 1.5rem;
+    font-size: 1.875rem;
+    line-height: 1.1;
+  }
+
+  // the one main action on these pages, in the pack's primary colour
+  .base-button {
+    background-color: hsl(var(--p));
+    border-color: hsl(var(--p));
+    color: hsl(var(--pc));
+
+    &:hover {
+      background-color: hsl(var(--pf));
+      border-color: hsl(var(--pf));
+    }
+  }
+
+  #flash {
+    position: static;
+    margin-top: 1rem;
+  }
+}
+
+.we-auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.we-auth-credit {
+  margin-top: 2rem;
+  font-size: 0.8125rem;
+}
+
+// The builder's signature (pack.yml: builder_credit, support_email): words, never a mark, in the bottom-right corner
+// of the photograph, away from the panel. Only where the photograph fills the page: in the narrow layout the corner
+// is left out, because the band has no corner where it can be read, and its support line sits at the foot of the form.
+.we-auth-builder {
+  display: none;
+}
+
+.we-auth-support {
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  text-align: center;
+
+  a {
+    text-decoration: underline;
+  }
+}
+
+@media (min-width: 1024px) and (min-aspect-ratio: 5/4) {
+  // On the jacket in the picture. A soft light halo and no plate: the text stays at 4.5:1 or better over the folds.
+  .we-auth-builder {
+    display: block;
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1rem;
+    color: hsl(var(--bc));
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.125rem;
+    text-align: right;
+    text-shadow: 0 0 2px rgb(255, 255, 255), 0 0 8px rgba(255, 255, 255, 0.75);
+
+    div:first-child {
+      font-weight: var(--brand-bold);
+      letter-spacing: 0.08em;
+    }
+
+    a {
+      text-decoration: underline;
+    }
+  }
+
+  // The builder's logo in place of its name (pack.yml builder_logo): a little narrower than the support line under
+  // it, so that the host's logo in the panel stays the larger one. No halo, shadow or plate: a brand kit may forbid
+  // effects on its logo (the WE PRIMUS kit does), so the logo relies on where it sits, on the light jacket.
+  .we-auth-builder-logo {
+    display: block;
+    width: 13.5rem;
+    height: auto;
+    margin: 0 0 0.5rem auto;
+  }
+
+  .we-auth-support {
+    display: none;
+  }
+
+  .we-auth {
+    display: flex;
+    align-items: center;
+    background: hsl(var(--b1));
+  }
+
+  .we-auth-plain {
+    justify-content: center;
+
+    .we-auth-panel {
+      margin-left: 0;
+    }
+  }
+
+  // In the picture the tablet spans 44%-71% of the width and the signing hand ends at 75%.
+  // 50% crops both sides evenly on windows narrower than 16:9 and keeps the tablet clear of the panel from
+  // 1024px up; 65% keeps the tablet and both hands in frame on an ultra-wide window.
+  .we-auth-photo {
+    position: fixed;
+    inset: 0;
+    height: 100%;
+    object-position: 50% 65%;
+  }
+
+  // "Liquid glass" (the owner, 30 Sep 2026): the one decided exception to the corner rule of every pack, for this
+  // panel only. White at 35% over a blurred backdrop, corners as round as the tablet in the picture (its radius
+  // is 3-4% of its long side: 24px here), no border and no outline; the shadow is wide and soft so that it does
+  // not read as a line. Without backdrop-filter the panel falls back to nearly opaque paper, with fields of
+  // white at 82% and a solid button.
+  .we-auth-panel {
+    position: relative;
+    width: clamp(20rem, 30vw, 26rem);
+    margin: 2rem 0 2rem 4vw;
+    padding: 2.25rem 2rem 1.75rem;
+    border-radius: 24px;
+    background: rgb(var(--brand-paper) / 0.94);
+    box-shadow: 0 32px 80px -24px rgb(var(--brand-shadow) / 0.35);
+
+    // fields are filled, not outlined, and half as round as the panel so the corners read as concentric
+    .base-input,
+    .select {
+      border-color: transparent;
+      border-radius: 12px;
+      background-color: rgba(255, 255, 255, 0.82);
+    }
+
+    .base-button,
+    #flash > div > div {
+      border-radius: 12px;
+    }
+
+    // Three depths of one glass (the owner, 30 Sep 2026): the panel, the fields a step lighter, the button tinted
+    // with the pack's primary colour. Nothing on it is a solid block. The panel's own glass is drawn by
+    // ::before: an element with backdrop-filter hides the page from the backdrop-filter of its children, so on
+    // the panel itself the fields and the button could frost nothing. Here only, after the fallback above.
+    @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+      z-index: 0;
+      background: transparent;
+
+      &::before {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        border-radius: inherit;
+        background: rgba(255, 255, 255, 0.35);
+        -webkit-backdrop-filter: blur(30px) saturate(1.25);
+        backdrop-filter: blur(30px) saturate(1.25);
+        content: "";
+      }
+
+      // Fields: a pane of white at 28% that softens what is behind it once more, with a hairline of light along
+      // its top edge so that it reads as a place to type. No border, no outline. Text, label and caret stay in
+      // the text colour. The keyboard focus is a lighter pane and a soft glow in the primary colour.
+      .base-input,
+      .select {
+        background-color: rgba(255, 255, 255, 0.28);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+
+        &:focus {
+          outline: none;
+          background-color: rgba(255, 255, 255, 0.44);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 0 0 1px hsl(var(--p) / 0.45),
+            0 0 14px 3px hsl(var(--p) / 0.4);
+        }
+      }
+
+      // Button: the primary colour as tinted glass, at the opacity the pack sets (--brand-glass-button: as low
+      // as its label stays readable over the brightest part of the photograph). The label is fully opaque.
+      // Hover and keyboard focus deepen the tint; the focus also gets the same soft glow as a field.
+      .base-button {
+        border-color: transparent;
+        background-color: hsl(var(--p) / var(--brand-glass-button));
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+
+        &:hover,
+        &:focus-visible {
+          border-color: transparent;
+          background-color: hsl(var(--p) / calc(var(--brand-glass-button) + 0.15));
+        }
+
+        &:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 1px hsl(var(--p) / 0.45), 0 0 14px 3px hsl(var(--p) / 0.4);
+        }
+      }
+    }
+  }
+}
+
+// The opening of a brand pack (app/javascript/brand/opening.js): a full-screen panel in the film's own field
+// colour (--brand-opening-color, set by the pack), with the whole film inside it, never cropped or stretched.
+// It is opaque from the moment it appears and fades only when the film has ended.
+.brand-opening {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--brand-opening-color);
+  transition: opacity 0.5s;
+
+  video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  &.done {
+    opacity: 0;
+    pointer-events: none;
+  }
+}

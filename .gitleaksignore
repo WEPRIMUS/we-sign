@@ -1,0 +1,8 @@
+# WE Sign: findings of the secret scan (gitleaks) that were looked at and are not live secrets.
+# One fingerprint per line: <commit>:<file>:<rule>:<line>.
+#
+# Upstream's first commit (2023-05-21) carried config/secrets.yml with a development and a test
+# secret_key_base. Upstream removed the file on 2026-08-23. Production never read them: it takes
+# SECRET_KEY_BASE from the environment.
+97c462ead2da7dd2fae2148d5d44accafa95ed28:config/secrets.yml:generic-api-key:2
+97c462ead2da7dd2fae2148d5d44accafa95ed28:config/secrets.yml:generic-api-key:5

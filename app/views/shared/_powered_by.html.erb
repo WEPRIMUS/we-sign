@@ -1,0 +1,16 @@
+<%# WE Sign: the DocuSeal credit, by decision of the product owner (30 Sep 2026): the words "Powered by DocuSeal" in plain
+    text, no link on the name, nothing after it. The name is Docuseal::UPSTREAM_NAME and never follows the product
+    name. The "Source code" link (the AGPL section 13 source offer) stands beside it, except where the caller passes
+    with_source: false (the sign-in panel). Callers may still pass with_counter and link_path; they are ignored.
+    Under the line with the source offer a brand pack may add one line of its own, centred, in the same size and
+    colour, in plain text (pack.yml footer_credit). The attribution line itself never changes. %>
+<% content_for(:attribution_shown, true) %>
+<div class="text-center px-2">
+  <%= t('powered_by') %> <%= Docuseal::UPSTREAM_NAME %>
+  <% if local_assigns.fetch(:with_source, true) %>
+    <span class="whitespace-nowrap">&middot; <a href="<%= Docuseal::SOURCE_CODE_URL %>" class="underline" target="_blank" rel="noopener"><%= t('wesign.source_code') %></a></span>
+  <% end %>
+</div>
+<% if local_assigns.fetch(:with_source, true) && Brand.footer_credit %>
+  <div class="text-center px-2"><%= Brand.footer_credit %></div>
+<% end %>

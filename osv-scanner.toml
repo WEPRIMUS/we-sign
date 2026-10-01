@@ -1,0 +1,7 @@
+# WE Sign: advisories accepted on purpose, each with its reason and a date to look again. osv-scanner reads this file
+# from the folder of the lockfiles it scans (CI job dependency_audit).
+
+[[IgnoredVulns]]
+id = "GHSA-5j4c-8p2g-v4jx"
+ignoreUntil = 2027-01-01
+reason = "vue 2.7.16 (ReDoS in the Vue 2 template compiler) is reached only through the eID Easy widget of the identity-verification step, which has no server route in this edition; the widget ships pre-built with its own Vue. Vue 2 has no fix: it needs Vue 3, which means eID Easy widget 3.x."

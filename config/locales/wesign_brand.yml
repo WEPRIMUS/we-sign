@@ -1,0 +1,9 @@
+# WE Sign: strings added by this fork. config/locales/i18n.yml is upstream's file and is not edited here;
+# its "DocuSeal" occurrences are handled by config/initializers/wesign_brand.rb.
+# Only English: every other language falls back to it (config.i18n.fallbacks).
+en:
+  wesign:
+    tagline: Document signing
+    source_code: Source code
+    not_in_this_edition: Not included in this edition.
+    email_code_always_on: Every signer confirms a code sent to their email before opening the form. This is always on.

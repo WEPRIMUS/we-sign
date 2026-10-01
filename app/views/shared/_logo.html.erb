@@ -1,0 +1,4 @@
+<%# WE Sign: the logo of the selected brand pack (lib/brand.rb), an unmodified copy of the brand kit file
+    (ASSET-SOURCES.md). The lockup by default. A caller that asks for a square box (passes `width`) gets the
+    pack's compact mark, when the pack has one. Only the height is set: the file keeps its own proportions. %>
+<img src="<%= Brand.url(local_assigns[:width] && Brand.file?('mark.png') ? 'mark.png' : 'logo-light.png') %>" alt="<%= Brand.public_name %>" class="brand-logo <%= local_assigns[:class] %>" style="height: <%= local_assigns.fetch(:height, 28).to_i %>px; width: auto; object-fit: contain">

@@ -1,0 +1,7 @@
+/* Test-only stand-in brand pack (spec/requests/wesign_brand_pack_spec.rb): a few plain colours, no font file. */
+html:root {
+  --p: 215 25% 26.7%;  /* #334155, the colour of the generated logo and icons */
+  --b1: 210 53.3% 94.1%; /* the page: #e8f0f8, as page_color in pack.yml */
+  --bc: 222 47% 11%;
+  --brand-radius: 4px;
+}

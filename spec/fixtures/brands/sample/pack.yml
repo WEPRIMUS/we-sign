@@ -1,0 +1,11 @@
+# Test-only stand-in brand pack, for spec/requests/wesign_brand_pack_spec.rb: a second pack beside we-primus, with
+# every option a client pack may set. Not a brand: plain colours and tiny generated images. The application never
+# loads it; the spec points the loader here inside the examples that need it.
+
+public_name: Sample Client
+legal_name: Sample Client Ltd
+page_color: "#e8f0f8"
+logo_leads_alone: true
+builder_credit: Sample Builder
+builder_logo: builder-logo.png
+support_email: help@example.com
