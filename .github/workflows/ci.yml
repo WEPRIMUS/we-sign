@@ -185,6 +185,16 @@ jobs:
           unzip -q pdfium-linux.zip -d /tmp/pdfium-linux
           cp /tmp/pdfium-linux/lib/libpdfium.so /usr/lib/libpdfium.so
           rm -rf pdfium-linux.zip /tmp/pdfium-linux
+      # WE Sign: the offline field finder (Templates::DetectFields), as in Dockerfile.wesign.test: the system
+      # onnxruntime in place of the gem's glibc build, and the same model, checked by SHA-256.
+      - name: Install the field finder (onnxruntime and the pinned model)
+        run: |
+          apk add --no-cache onnxruntime
+          gem_lib=$(bundle exec ruby -e "print Dir[Gem::Specification.find_by_name('onnxruntime').gem_dir + '/vendor/*.so'].first")
+          ln -sf /usr/lib/libonnxruntime.so.1 "$gem_lib"
+          mkdir -p tmp
+          wget -O tmp/model.onnx "https://github.com/docusealco/fields-detection/releases/download/2.0.0/model_704_int8.onnx"
+          echo "a0a92ef7f50b6e5c707b7da9c59977bc7c9e9d8f85542bd75169c693f5efa4da  tmp/model.onnx" | sha256sum -c -
       - name: Run
         env:
           RAILS_ENV: test
