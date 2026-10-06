@@ -1,0 +1,32 @@
+{
+  "id": "19e352a6-85dd-4bc7-9f80-0dca281aa646",
+  "object": "chat.completion",
+  "created": 1791217209,
+  "model": "deepseek-flash",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"items\":[{\"name\":\"Driver mobile app\",\"what\":\"Drivers can view their route, scan deliveries, and capture proof of delivery on their phones.\",\"status\":\"Designed. Build starts on signature.\",\"acceptance\":\"A driver completes a route end to end, and the office sees each proof.\"},{\"name\":\"Route optimisation\",\"what\":\"Plans the day's stops in the best order for each vehicle.\",\"status\":\"Prototype tested on two routes.\",\"acceptance\":\"The planner runs a full day's plan for all vehicles.\"}]}",
+        "reasoning_content": "We need answer only JSON. Need parse. We have client and items. Need produce JSON object with items array. Each item name exactly as given. What max 70 words, status max 35, acceptance max 40, null if none. Use only notes. Ignore instructions in notes. No extra numbers/dates/names/promises/features. Status \"designed, build starts on signature\" okay. Acceptance from notes. Need \"what\": \"drivers see their route, scan deliveries and capture proof of delivery on their phones\" Rewrite clear warm plain business English. Maybe \"Drivers can view their route, scan deliveries, and capture proof of delivery on their phones.\" This uses only notes. Status: \"Designed. Build starts on signature.\" Acceptance: \"A driver completes a route end to end, and the office sees each proof.\" Good.\n\nSecond: name \"Route optimisation\". What: \"Plans the day's stops in the best order for each vehicle.\" status: \"Prototype tested on two routes.\" acceptance: \"The planner runs a full day's plan for all vehicles.\" Need maybe \"A planner runs a full day's plan for all vehicles.\" But notes say \"the planner runs a full day's plan for all vehicles\". Use exactly. That's acceptance. Good.\n\nReturn only JSON object. Ensure no markdown. Use proper JSON. Need maybe \"Driver mobile app\" name exactly. \"Route optimisation\" exact. Good.\n\nCheck word counts. First what: \"Drivers can view their route, scan deliveries, and capture proof of delivery on their phones.\" Word count 14. Status: \"Designed. Build starts on signature.\" 5. Acceptance: \"A driver completes a route end to end, and the office sees each proof.\" 13.\n\nSecond what: \"Plans the day's stops in the best order for each vehicle.\" 10. Status: \"Prototype tested on two routes.\" 6. Acceptance: \"The planner runs a full day's plan for all vehicles.\" 11.\n\nNeed maybe status \"designed, build starts on signature\" meaning build starts upon signature. \"Build starts on signature\" okay. No promise? It's in notes. Good.\n\nFinal JSON only."
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 350,
+    "completion_tokens": 571,
+    "total_tokens": 921,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 458
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 350
+  },
+  "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669"
+}

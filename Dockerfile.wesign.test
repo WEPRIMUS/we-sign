@@ -22,6 +22,14 @@ WORKDIR /app
 COPY ./Gemfile ./Gemfile.lock ./
 RUN bundle install --jobs 4 --retry 4
 
+# The offline field finder (Templates::DetectFields), as in the main Dockerfile: the system onnxruntime in place of the
+# gem's glibc build, and the same model, checked by SHA-256. The Contract Desk specs run it on real pages.
+RUN apk add --no-cache onnxruntime && \
+    ln -sf /usr/lib/libonnxruntime.so.1 $(ruby -e "print Dir[Gem::Specification.find_by_name('onnxruntime').gem_dir + '/vendor/*.so'].first") && \
+    mkdir -p /app/tmp && \
+    wget -O /app/tmp/model.onnx "https://github.com/docusealco/fields-detection/releases/download/2.0.0/model_704_int8.onnx" && \
+    echo "a0a92ef7f50b6e5c707b7da9c59977bc7c9e9d8f85542bd75169c693f5efa4da  /app/tmp/model.onnx" | sha256sum -c -
+
 COPY ./package.json ./yarn.lock ./
 RUN yarn install --frozen-lockfile --network-timeout 1000000
 

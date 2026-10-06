@@ -78,6 +78,52 @@ edition."); the newsletter page that posted the administrator's e-mail address t
 straight to the dashboard); the GitHub, Discord and chat links in the staff menu; the embedding snippets; the vendor's
 default sender and support addresses (`SUPPORT_EMAIL`, `SMTP_FROM`); the vendor's social-media tags and icons.
 
+## Contract Desk (added 5 Oct 2026)
+
+The Contract Desk prepares documents for signature and follows them to the signed copy: a person uploads a PDF,
+the desk reads it (parties, signers, dates, amounts, what is missing), matches the client in its register, asks only
+what it cannot establish, places the signature boxes, and builds the WE Sign document without sending it. One person
+then answers "Yes, send". The desk sends reminders, warns before the signing links expire, and fetches the signed PDF
+and the audit record into its register.
+
+**Architecture.** The desk is built on the *Postquadratic Operating Architecture* (POA-001), originated by
+**João de Melo**, who is its design authority: deterministic code for numbers, permissions and validation; AI only for
+interpretation; three truth layers (the uploaded file as source truth, interpreted facts with their page and quote, the
+signed document as deliverable truth); no invented values, gaps shown and asked, bounded retries, no duplicate actions.
+
+**How it sits in this fork.** Its own namespace, so that upstream merges stay easy: models and tables `desk_*`
+(`app/models/desk/`, one migration), controllers and views under `/desk` (`app/controllers/desk/`, `app/views/desk/`,
+`config/routes/desk.rb`), the engine in `lib/desk/`, two Sidekiq jobs (`app/jobs/desk/`), one mailer (`DeskMailer`).
+It uses WE Sign's own services in-process: `Templates::CreateAttachments`, `Templates::DetectFields` (offline field
+finder), `Submissions.create_from_submitters` with e-mail off, `Submitters::SubmitValues`, `SubmitterMailer`.
+Upstream files changed for it: `config/routes.rb` (one `draw :desk` line), `app/views/shared/_navbar.html.erb` (one
+link), `db/schema.rb` (the new tables).
+
+**The rules it enforces in code.** Every user is an administrator in this edition, so the desk does not rely on roles:
+every query is scoped to the signed-in person's account; only `Desk::Sender` sends, and only with a `Desk::Approval`
+made from that person's own signed-in request with two-factor sign-in turned on; the desk's jobs and AI calls run
+inside `Desk::Automation`, where sending is refused. The event log (`desk_events`) is append-only, enforced by a
+database trigger. Clients, documents and questions are archived, never deleted. The same file (SHA-256) is one intake;
+the same legal name or tax number is one client (unique indexes).
+
+**The reading model** is one setting per installation, any OpenAI-compatible endpoint: `DESK_AI_ENDPOINT`,
+`DESK_AI_MODEL`, `DESK_AI_API_KEY` (`lib/desk/ai_client.rb`). Only that endpoint is called, over HTTPS to a public
+address (the server-side fetch guard); `DESK_AI_ALLOW_INTERNAL=true` admits that one host on an internal network, for a
+local model.
+
+## Icons (6 Oct 2026)
+
+The interface icons are **Phosphor Icons, Regular weight** (https://phosphoricons.com), in place of upstream's Tabler
+icons, with one line weight everywhere. One mapping file, `lib/icons/mapping.json`, names the Phosphor icon for each
+Tabler name the code uses; `lib/icons/generate.mjs` writes from it the Vue components (`app/javascript/icons/index.js`,
+which webpack resolves `@tabler/icons-vue` to, so upstream's Vue files are unchanged) and the Rails partials in
+`app/views/icons`. Brand marks and flags stay as they are. `spec/lib/wesign_icons_spec.rb` fails when an upstream
+merge brings back a Tabler icon that the mapping replaces, or adds one the mapping does not know.
+
+- Phosphor Icons: MIT licence, Copyright (c) 2023 Phosphor Icons (package `@phosphor-icons/core`).
+- Tabler Icons, still used for the brand marks (and in upstream's code that this fork keeps): MIT licence,
+  Copyright (c) 2020-2023 Paweł Kuna (package `@tabler/icons-vue`).
+
 ## Licence
 
 GNU Affero General Public License version 3 (AGPL-3.0), full text in [`LICENSE`](LICENSE), together with

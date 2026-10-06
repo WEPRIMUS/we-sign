@@ -4,7 +4,8 @@ const { VueLoaderPlugin } = require('vue-loader')
 
 const configs = generateWebpackConfig({
   resolve: {
-    extensions: ['.css', '.scss', '.vue']
+    extensions: ['.css', '.scss', '.vue'],
+    alias: { '@tabler/icons-vue$': require.resolve('../../app/javascript/icons/index.js') } // WE Sign: Phosphor icons, lib/icons
   },
   performance: {
     maxEntrypointSize: 0

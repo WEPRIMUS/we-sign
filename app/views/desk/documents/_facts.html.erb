@@ -1,0 +1,58 @@
+<%# What the desk read from the document (interpreted facts), each with its page and how sure it is. %>
+<% by_key = facts.group_by(&:key) %>
+<div class="space-y-4 text-sm">
+  <% %w[reference revision].each do |key| %>
+    <% (by_key[key] || []).each do |fact| %>
+      <div class="flex justify-between gap-3 <%= 'opacity-60 line-through' if fact.status == 'unverified' %>"><span><%= key.capitalize %>: <b class="font-medium"><%= fact.value['value'] %></b></span><%= desk_fact_mark(fact) %></div>
+    <% end %>
+  <% end %>
+  <% if by_key['party'].present? %>
+    <div>
+      <div class="font-medium mb-1">Parties</div>
+      <ul class="space-y-1">
+        <% by_key['party'].each do |fact| %>
+          <li class="flex justify-between gap-3 <%= 'opacity-60 line-through' if fact.status == 'unverified' %>">
+            <span><%= fact.value['legal_name'] %><%= " (#{fact.value['role']})" if fact.value['role'].present? %><%= ' · your company' if fact.value['own'] %><%= " · #{fact.value['country']}" if fact.value['country'].present? %><%= " · tax no. #{fact.value['tax_number']}" if fact.value['tax_number'].present? %></span>
+            <%= desk_fact_mark(fact) %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+  <% if by_key['date'].present? %>
+    <div>
+      <div class="font-medium mb-1">Dates</div>
+      <ul class="space-y-1">
+        <% by_key['date'].each do |fact| %>
+          <li class="flex justify-between gap-3 <%= 'opacity-60 line-through' if fact.status == 'unverified' %>"><span><%= fact.value['label'].to_s.upcase_first %>: <%= fact.value['as_written'] %></span><%= desk_fact_mark(fact) %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+  <% if by_key['amount'].present? %>
+    <div>
+      <div class="font-medium mb-1">Amounts</div>
+      <ul class="space-y-1">
+        <% by_key['amount'].each do |fact| %>
+          <li class="flex justify-between gap-3 <%= 'opacity-60 line-through' if fact.status == 'unverified' %>">
+            <span><%= fact.value['label'].to_s.upcase_first %>: <%= fact.value['as_written'] %><% if fact.value['amount'] %> <span class="text-base-content/60">(<%= [fact.value['currency'], number_with_delimiter(BigDecimal(fact.value['amount']).round(2).to_s('F'))].compact.join(' ') %>)</span><% end %></span>
+            <%= desk_fact_mark(fact) %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+  <% if by_key['gap'].present? %>
+    <div>
+      <div class="font-medium mb-1">Left open in the document</div>
+      <ul class="space-y-1 list-disc ml-5">
+        <% by_key['gap'].each do |fact| %>
+          <li><%= fact.value['question'] %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+  <% if facts.empty? %>
+    <p class="text-base-content/60">Nothing read yet.</p>
+  <% end %>
+</div>

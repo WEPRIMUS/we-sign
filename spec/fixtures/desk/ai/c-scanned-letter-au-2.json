@@ -1,0 +1,32 @@
+{
+  "id": "058692d1-8054-4de7-a1e7-96ae8117f40f",
+  "object": "chat.completion",
+  "created": 1791212060,
+  "model": "deepseek-flash",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"boxes\": [{\"id\": 1, \"kind\": \"other\", \"slot\": null, \"confidence\": 0.75}, {\"id\": 2, \"kind\": \"signature\", \"slot\": \"p1-1\", \"confidence\": 0.98}, {\"id\": 3, \"kind\": \"signature\", \"slot\": \"p1-2\", \"confidence\": 0.98}, {\"id\": 4, \"kind\": \"date\", \"slot\": \"p1-1\", \"confidence\": 0.98}, {\"id\": 5, \"kind\": \"date\", \"slot\": \"p1-2\", \"confidence\": 0.98}, {\"id\": 6, \"kind\": \"signature\", \"slot\": \"own-1\", \"confidence\": 0.98}, {\"id\": 7, \"kind\": \"name\", \"slot\": \"own-1\", \"confidence\": 0.95}, {\"id\": 8, \"kind\": \"date\", \"slot\": \"own-1\", \"confidence\": 0.98}], \"missing\": []}",
+        "reasoning_content": "We need answer only JSON object. Need match boxes. Let's inspect.\n\nDocument: Wattle Creek Minerals Pty Ltd. Signers list:\np1-1 Hannah Reid, Director, Wattle Creek.\np1-2 Tom Brennan, Director / Company Secretary, Wattle Creek.\nown-1 Northwind Studio FZE (no name/title specified? accepted for Northwind Studio FZE).\n\nBoxes:\n1 large rect x .112 y .27 w .759 h .221. This appears huge rectangle above signatures? In image red box 1 surrounds blank area? It is not signature line? It encloses \"1\" at top left, big empty box. Could be some field? It is not a place to sign? maybe \"other\"? It might be a stamp/logo area? Actually \"Executed by Wattle Creek Minerals... in accordance with section 127\" and then large box? Could be for company seal? Or common seal? The text says executed in accordance with section 127. The large box might be for company seal? But kind \"other\" because not a place to sign/write name/title/date? It may be for signature? Hmm.\n\n2: x .104 y .5 w .284 h .025 directly below large box, above \"Signature of Director\" and \"Name: Hannah Reid\". So box 2 is signature for p1-1 Hannah Reid. kind signature, slot p1-1.\n3: x .537 y .502 w .283 h .025. Above \"Signature of Director / Company Secretary\" and \"Name: Tom Brennan\". So signature for p1-2 Tom Brennan. kind signature, slot p1-2.\n4: x .151 y .585 w .224 h .024. Below \"Date:\" for Hannah Reid? Let's see: Under Name Hannah Reid, there is Date: [box 4]. Yes date for p1-1. kind date, slot p1-1.\n5: x .584 y .587 w .223 h .024. Under Name Tom Brennan, Date: [box 5]. date for p1-2.\n6: x .188 y .704 w .186 h .023. Under \"Accepted for Northwind Studio FZE\", \"Signature:\" box. So signature for own-1.\n7: x .159 y .739 w .233 h .023. Under \"Name:\" for Northwind. kind name? It is a place to write name. The signer is own-1, but no specific name? It says \"Accepted for Northwind Studio FZE\"; box 7 name. kind name, slot own-1? Maybe null? The signer key is own-1, no name given, but name box for signer. It is a place to write a name, so slot own-1. \n8: x .149 y .775 w .233 h .022. Under \"Date:\" for Northwind. kind date, slot own-1.\n\nBox 1: Large rectangle enclosing empty space maybe for signature? Let's look at text: \"Executed by Wattle Creek Minerals Pty Ltd in accordance with section 127 of the Corporations Act 2001 (Cth):\" Then a large empty box. Under it are signature lines. In Australian companies, execution under s127 can be by two directors or director+secretary, with signatures. The large box might be for the company seal? But no label. Detector box 1 may be an artifact? But kind \"other\" because not a place to sign/write name/title/date? It is not explicitly a signature line; maybe it's a text area? It's huge. The red rectangle maybe around the \"execution block\" but not a field? The instructions say \"kind 'other' is anything that is not a place to sign or write a name, title or date (body text, stamps, logos).\" So box 1 likely other.\n\nNeed missing lines? Are there any signer whose signature line has no numbered box? We have all signers with signature boxes: p1-1 box2, p1-2 box3, own-1 box6. Missing: none? Check maybe own-1 has no name specified, but signature line present box6. No missing. Output missing array empty.\n\nNeed confidence values. Could assign high for clear matches, maybe 0.95 etc. Need JSON only. Let's construct.\n\nBoxes list:\nid 1 kind other slot null confidence maybe 0.8? Because maybe could be seal area? But not signer. 0.7.\nid 2 kind signature slot \"p1-1\" conf 0.98\nid 3 kind signature slot \"p1-2\" conf 0.98\nid 4 kind date slot \"p1-1\" conf 0.98\nid 5 kind date slot \"p1-2\" conf 0.98\nid 6 kind signature slot \"own-1\" conf 0.98\nid 7 kind name slot \"own-1\" conf 0.98 (but maybe own-1 name box; if no name, still place to write name)\nid 8 kind date slot \"own-1\" conf 0.98\n\nMissing: [] maybe.\n\nNeed ensure no extra text. Output JSON object exactly.\n\nPotential issue: Box 1 might be \"signature\" for both directors? It contains signature? No, it's above the signature lines; maybe the large box is for signature? Actually in image, the large box is after \"Executed by ... in accordance with section 127...:\", then below it are two \"Signature of Director\" and \"Signature of Director/Company Secretary\" lines. The large box could be an entire signature block? But it's a rectangle around empty area, with \"1\" label top left. It might be a detected box representing the whole execution block? But kind \"other\" due to not specific. However if detector found it as box, maybe it is not a form field. I should classify other.\n\nNeed maybe \"missing\" for own-1? There's no printed name/title for Northwind? But they are signer, signature line exists. No missing.\n\nLet's produce."
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1633,
+    "completion_tokens": 1537,
+    "total_tokens": 3170,
+    "prompt_tokens_details": {
+      "cached_tokens": 128
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 1298
+    },
+    "prompt_cache_hit_tokens": 128,
+    "prompt_cache_miss_tokens": 1505
+  },
+  "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669"
+}

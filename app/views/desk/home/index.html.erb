@@ -1,0 +1,80 @@
+<%= render 'desk/refresh' if @preparing.any? %>
+<%= render 'desk/nav', current: :home %>
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-3xl font-bold">Contract desk</h1>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+  <div class="rounded-2xl bg-base-200 p-5 flex flex-col">
+    <div class="flex items-center gap-2 text-lg font-medium"><%= svg_icon('file_text', class: 'w-6 h-6') %>New contract</div>
+    <p class="text-sm text-base-content/60 mt-2 flex-grow">Answer a few questions; the desk writes the document in house style.</p>
+    <%= form_with url: new_desk_contract_path, method: :get, class: 'mt-4' do %>
+      <button class="base-button w-full" type="submit">New contract</button>
+    <% end %>
+  </div>
+  <div class="rounded-2xl bg-base-200 p-5 flex flex-col">
+    <div class="flex items-center gap-2 text-lg font-medium"><%= svg_icon('cloud_upload', class: 'w-6 h-6') %>Upload a document</div>
+    <p class="text-sm text-base-content/60 mt-2 flex-grow">A PDF to sign: the desk reads it, finds the client and the signers, and places the boxes.</p>
+    <%= link_to 'Upload a document', new_desk_upload_path, class: 'white-button w-full mt-4' %>
+  </div>
+  <%= link_to desk_clients_path, class: 'rounded-2xl bg-base-200 p-5 flex flex-col hover:shadow' do %>
+    <div class="flex items-center gap-2 text-lg font-medium"><%= svg_icon('building', class: 'w-6 h-6') %>Clients</div>
+    <p class="text-sm text-base-content/60 mt-2 flex-grow">The client register: legal names, signers, tax numbers.</p>
+    <span class="mt-4 text-2xl font-medium"><%= @counts[:clients] %></span>
+  <% end %>
+  <%= link_to desk_documents_path, class: 'rounded-2xl bg-base-200 p-5 flex flex-col hover:shadow' do %>
+    <div class="flex items-center gap-2 text-lg font-medium"><%= svg_icon('files', class: 'w-6 h-6') %>Documents</div>
+    <p class="text-sm text-base-content/60 mt-2 flex-grow">Every document, its state, the signed PDF and the audit record.</p>
+    <span class="mt-4 text-2xl font-medium"><%= @counts[:documents] %></span>
+  <% end %>
+</div>
+<h2 class="text-xl font-bold mb-3">Waiting for you</h2>
+<% items = @waiting.size + @ready.size + @new_clients.size + @preparing.size %>
+<% if items.zero? %>
+  <p class="text-base-content/60">Nothing is waiting for you.</p>
+<% else %>
+  <ul class="space-y-2">
+    <% @waiting.each do |document| %>
+      <li class="rounded-xl border border-base-300 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+          <%= link_to document.name, desk_document_path(document), class: 'font-medium hover:underline' %>
+          <% if document.last_error.present? %>
+            <div class="text-sm text-red-600 mt-0.5">Could not prepare it: <%= document.last_error %></div>
+          <% else %>
+            <div class="text-sm text-base-content/60 mt-0.5"><%= pluralize(@questions[document.id].to_i, 'question') %> to answer<%= " · #{document.client.legal_name}" if document.client %></div>
+          <% end %>
+        </div>
+        <% if document.last_error.present? && @questions[document.id].to_i.zero? %>
+          <%= button_to 'Try again', retry_desk_document_path(document), class: 'white-button btn-sm' %>
+        <% else %>
+          <%= link_to 'Answer', desk_questions_path, class: 'white-button btn-sm' %>
+        <% end %>
+      </li>
+    <% end %>
+    <% @ready.each do |document| %>
+      <li class="rounded-xl border border-base-300 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+          <%= link_to document.name, desk_document_path(document), class: 'font-medium hover:underline' %>
+          <div class="text-sm text-base-content/60 mt-0.5">Ready to send<%= " · #{document.client.legal_name}" if document.client %></div>
+        </div>
+        <%= link_to 'Review and send', review_desk_document_path(document), class: 'white-button btn-sm' %>
+      </li>
+    <% end %>
+    <% @new_clients.each do |client| %>
+      <li class="rounded-xl border border-base-300 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+          <%= link_to client.legal_name, desk_client_path(client), class: 'font-medium hover:underline' %>
+          <div class="text-sm text-base-content/60 mt-0.5">New client, please confirm · <%= client.source %></div>
+        </div>
+        <%= link_to 'Check and confirm', desk_client_path(client), class: 'white-button btn-sm' %>
+      </li>
+    <% end %>
+    <% @preparing.each do |document| %>
+      <li class="rounded-xl border border-base-300 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+          <%= link_to document.name, desk_document_path(document), class: 'font-medium hover:underline' %>
+          <div class="text-sm text-base-content/60 mt-0.5 flex items-center gap-1"><%= svg_icon('loader', class: 'w-4 h-4 animate-spin') %>The desk is preparing it</div>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

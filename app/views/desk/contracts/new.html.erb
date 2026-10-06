@@ -1,0 +1,11 @@
+<%= render 'desk/nav', current: :home %>
+<div class="max-w-2xl">
+  <h1 class="text-3xl font-bold mb-2">New contract</h1>
+  <p class="text-base-content/60 mb-6">Answer a few questions, one at a time. The desk writes the document in house style: the prices, totals, VAT, the payment shares, the number and the dates are worked out by code; the AI only words the scope of each item from your notes. You see the finished PDF before anything is sent.</p>
+  <div class="rounded-2xl bg-base-200 p-6 space-y-4">
+    <div class="flex items-center gap-2 text-lg font-medium"><%= svg_icon('file_text', class: 'w-6 h-6') %>Quotation and variation</div>
+    <p class="text-sm text-base-content/60">Adds items to an existing agreement and sets their price and payment. Eight questions.</p>
+    <%= button_to 'Start', desk_contracts_path, class: 'base-button w-full' %>
+  </div>
+  <p class="text-sm text-base-content/60 mt-4">Other types (services agreement, NDA, letters for signature) come next.</p>
+</div>

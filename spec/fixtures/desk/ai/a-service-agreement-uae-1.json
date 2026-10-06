@@ -1,0 +1,32 @@
+{
+  "id": "9ceed849-b09c-40bc-adc1-d8ce0f43bb79",
+  "object": "chat.completion",
+  "created": 1791211996,
+  "model": "deepseek-flash",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"document_type\": {\"value\": \"services_agreement\", \"page\": 1, \"quote\": \"SERVICES AGREEMENT\", \"confidence\": 0.97},\n  \"title\": {\"value\": \"SERVICES AGREEMENT\", \"page\": 1, \"quote\": \"SERVICES AGREEMENT\", \"confidence\": 0.97},\n  \"reference\": {\"value\": \"SA-2026-014\", \"page\": 1, \"quote\": \"Reference: SA-2026-014 Revision: 0 Date: 12 October 2026\", \"confidence\": 0.95},\n  \"revision\": {\"value\": \"0\", \"page\": 1, \"quote\": \"Reference: SA-2026-014 Revision: 0 Date: 12 October 2026\", \"confidence\": 0.95},\n  \"parties\": [\n    {\n      \"key\": \"p1\",\n      \"legal_name\": \"Northwind Studio FZE\",\n      \"trading_name\": null,\n      \"role\": \"Provider\",\n      \"country\": \"AE\",\n      \"address\": \"Sharjah, United Arab Emirates\",\n      \"tax_number\": null,\n      \"page\": 1,\n      \"quote\": \"This Services Agreement is made between Northwind Studio FZE, Sharjah, United Arab Emirates (the \\\"Provider\\\")\",\n      \"confidence\": 0.93\n    },\n    {\n      \"key\": \"p2\",\n      \"legal_name\": \"Saffron Dune Logistics L.L.C.\",\n      \"trading_name\": null,\n      \"role\": \"Client\",\n      \"country\": \"AE\",\n      \"address\": \"Unit 1408, Palm Grove Business Centre, Al Barsha, Dubai, United Arab Emirates\",\n      \"tax_number\": \"100234567800003\",\n      \"page\": 1,\n      \"quote\": \"Saffron Dune Logistics L.L.C., Unit 1408, Palm Grove Business Centre, Al Barsha, Dubai, United Arab Emirates, Tax Registration Number 100234567800003 (the \\\"Client\\\")\",\n      \"confidence\": 0.94\n    }\n  ],\n  \"signers\": [\n    {\n      \"party_key\": \"p1\",\n      \"name\": null,\n      \"title\": null,\n      \"email\": null,\n      \"page\": 2,\n      \"position\": \"left\",\n      \"quote\": \"For and on behalf of\\nNorthwind Studio FZE\\nName: ______________________\\nTitle: ______________________\",\n      \"confidence\": 0.9\n    },\n    {\n      \"party_key\": \"p2\",\n      \"name\": \"Layla Haddad\",\n      \"title\": \"Operations Director\",\n      \"email\": null,\n      \"page\": 2,\n      \"position\": \"right\",\n      \"quote\": \"For and on behalf of\\nSaffron Dune Logistics L.L.C.\\nName: Layla Haddad\\nTitle: Operations Director\",\n      \"confidence\": 0.93\n    }\n  ],\n  \"dates\": [\n    {\n      \"label\": \"Agreement date\",\n      \"value\": \"12 October 2026\",\n      \"iso\": \"2026-10-12\",\n      \"page\": 1,\n      \"quote\": \"Reference: SA-2026-014 Revision: 0 Date: 12 October 2026\",\n      \"confidence\": 0.95\n    },\n    {\n      \"label\": \"Term start date\",\n      \"value\": \"1 November 2026\",\n      \"iso\": \"2026-11-01\",\n      \"page\": 1,\n      \"quote\": \"This Agreement starts on 1 November 2026 and runs for twelve (12) months.\",\n      \"confidence\": 0.95\n    }\n  ],\n  \"amounts\": [\n    {\n      \"label\": \"One-time set-up fee\",\n      \"value\": \"AED 18,500.00\",\n      \"currency\": \"AED\",\n      \"page\": 1,\n      \"quote\": \"One-time set-up fee: AED 18,500.00\",\n      \"confidence\": 0.96\n    },\n    {\n      \"label\": \"Monthly support fee\",\n      \"value\": \"AED 1,200.00 per month\",\n      \"currency\": \"AED\",\n      \"page\": 1,\n      \"quote\": \"Monthly support fee: AED 1,200.00 per month\",\n      \"confidence\": 0.96\n    },\n    {\n      \"label\": \"VAT rate\",\n      \"value\": \"5%\",\n      \"currency\": null,\n      \"page\": 1,\n      \"quote\": \"VAT at 5% is added to each invoice.\",\n      \"confidence\": 0.94\n    }\n  ],\n  \"gaps\": [\n    {\n      \"key\": \"schedule_1_missing\",\n      \"question\": \"The services are said to be described in Schedule 1, but no Schedule 1 is included. Can you send it?\",\n      \"example\": \"Schedule 1: fleet-tracking dashboard scope, support hours and service levels.\"\n    }\n  ]\n}",
+        "reasoning_content": "Let me extract the details.\n\nDocument type: services agreement. Page 1, quote \"SERVICES AGREEMENT\".\n\nTitle: \"SERVICES AGREEMENT\".\n\nReference: SA-2026-014, page 1, quote \"Reference: SA-2026-014 Revision: 0 Date: 12 October 2026\".\n\nRevision: 0.\n\nParties: p1 Northwind Studio FZE, role \"Provider\", country AE (United Arab Emirates → AE), address \"Sharjah, United Arab Emirates\", tax_number null. Page 1.\n\np2 Saffron Dune Logistics L.L.C., role \"Client\", country AE, address \"Unit 1408, Palm Grove Business Centre, Al Barsha, Dubai, United Arab Emirates\", tax_number \"100234567800003\". Page 1.\n\nSigners: two signature blocks. Left: Northwind Studio FZE — Name blank, Title blank → name null, title null. Position left. Right: Saffron Dune Logistics L.L.C. — Name: Layla Haddad, Title: Operations Director. Position right.\n\nDates: Date of document: 12 October 2026 → iso 2026-10-12. Term start: 1 November 2026 → 2026-11-01. Term length 12 months (that's a duration not a date). Payment terms 30 days (not a date).\n\nAmounts: One-time set-up fee: AED 18,500.00, currency AED. Monthly support fee: AED 1,200.00 per month, currency AED. VAT at 5%.\n\nGaps: Schedule 1 is referenced but not included (\"as described in Schedule 1\"). Also the blank date lines in the signature blocks are handled by the desk (not a gap). The blank name/title for the Provider signer — not a gap per instruction (\"Not about who signs, their names, titles or e-mail addresses\"). So gap: Schedule 1 missing.\n\nMaybe also VAT number of the Provider is not given — but that's not necessarily a gap required. I'll keep just the schedule gap. Perhaps also \"VAT\" rate given, fine.\n\nConfidence values."
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 3198,
+    "completion_tokens": 1539,
+    "total_tokens": 4737,
+    "prompt_tokens_details": {
+      "cached_tokens": 2944
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 453
+    },
+    "prompt_cache_hit_tokens": 2944,
+    "prompt_cache_miss_tokens": 254
+  },
+  "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669"
+}

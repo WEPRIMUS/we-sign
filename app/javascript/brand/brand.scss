@@ -421,3 +421,12 @@ body:not(.we-auth) {
     pointer-events: none;
   }
 }
+
+// Icons are Phosphor glyphs (lib/icons): filled shapes, not lines. Upstream colours a few icons with daisyUI's stroke
+// classes; on a glyph that colour has to be the fill. A pack that recolours a stroke class recolours this fill too.
+svg.ph-icon {
+  &.stroke-info { fill: hsl(var(--in)); }
+  &.stroke-success { fill: hsl(var(--su)); }
+  &.stroke-warning { fill: hsl(var(--wa)); }
+  &.stroke-error { fill: hsl(var(--er)); }
+}

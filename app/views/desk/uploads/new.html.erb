@@ -1,0 +1,12 @@
+<%= render 'desk/nav', current: :home %>
+<div class="max-w-2xl">
+  <h1 class="text-3xl font-bold mb-2">Upload a document</h1>
+  <p class="text-base-content/60 mb-6">A PDF of up to 25 MB. The desk reads it, finds the client and the signers, places the signature boxes and asks you only what it cannot find. The file is sent as it is: the desk never changes it.</p>
+  <%= form_with url: desk_uploads_path, multipart: true, class: 'rounded-2xl bg-base-200 p-6 space-y-5' do %>
+    <label class="block">
+      <span class="block font-medium mb-2">The PDF</span>
+      <input type="file" name="file" accept="application/pdf,.pdf" required class="file-input file-input-bordered w-full bg-white">
+    </label>
+    <button class="base-button w-full" type="submit">Upload</button>
+  <% end %>
+</div>

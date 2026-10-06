@@ -1,0 +1,6 @@
+<% open_count = Desk::Question.open.where(account_id: current_account.id).joins(:document).merge(Desk::Document.where(state: 'waiting_for_you')).count %>
+<nav class="flex flex-wrap items-center gap-1 mb-6 text-base" aria-label="Contract desk">
+  <% [['Home', desk_root_path, :home], ['Clients', desk_clients_path, :clients], ['Documents', desk_documents_path, :documents], ["Questions#{" (#{open_count})" if open_count.positive?}", desk_questions_path, :questions], ['Settings', edit_desk_settings_path, :settings]].each do |label, path, key| %>
+    <%= link_to label, path, class: "px-3 py-1.5 rounded-lg #{local_assigns[:current] == key ? 'bg-base-200 font-medium' : 'hover:bg-base-200'}", aria: { current: (local_assigns[:current] == key ? 'page' : nil) } %>
+  <% end %>
+</nav>

@@ -71,6 +71,8 @@ import OpenModalMobile from './elements/open_modal_mobile'
 import HistoryBack from './elements/history_back'
 import DatePlaceholder from './elements/date_placeholder'
 import FlashMessage from './elements/flash_message'
+import DeskRows from './elements/desk_rows'
+import DeskRefresh from './elements/desk_refresh'
 
 document.addEventListener('turbo:before-cache', () => {
   window.flash?.remove()
@@ -195,6 +197,8 @@ safeRegisterElement('open-modal-mobile', OpenModalMobile)
 safeRegisterElement('history-back', HistoryBack)
 safeRegisterElement('date-placeholder', DatePlaceholder)
 safeRegisterElement('flash-message', FlashMessage)
+safeRegisterElement('desk-rows', DeskRows)
+safeRegisterElement('desk-refresh', DeskRefresh)
 
 safeRegisterElement('template-builder', class extends HTMLElement {
   connectedCallback () {

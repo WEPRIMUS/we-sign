@@ -1,0 +1,31 @@
+<%# One row of a form question, with its remove button. The blank row in the form's <template> is what "+ Add another" copies. %>
+<% field = ->(name) { "answer[rows][][#{name}]" } %>
+<% spot = ->(name) { at && "#{at}.#{name}" } %>
+<div class="relative rounded-xl bg-white/60 border border-base-300 p-4 pr-12" data-row>
+  <button type="button" class="absolute top-2 right-2 btn btn-ghost btn-sm btn-square text-lg" data-remove-row aria-label="Remove this line" title="Remove this line">&times;</button>
+  <% case key %>
+  <% when 'items' %>
+    <% currency = document.client&.default_currency.presence %>
+    <% currencies = ([currency] | Desk::Reader::CURRENCIES.values).compact %>
+    <% choices = options_for_select((currency ? [] : [['Choose', '']]) + currencies, row['currency'].presence || currency) %>
+    <div class="grid grid-cols-6 gap-3">
+      <%= render 'desk/questions/box', label: 'Name', name: field.call('name'), value: row['name'], at: spot.call('name'), error:, required: true, autofocus:, wrap: 'col-span-6', placeholder: 'Driver mobile app' %>
+      <%= render 'desk/questions/box', label: 'One-time price', name: field.call('one_time'), value: row['one_time'], at: spot.call('one_time'), error:, required: true, inputmode: 'decimal', wrap: 'col-span-2', placeholder: '12000' %>
+      <%= render 'desk/questions/box', label: 'Currency', name: field.call('currency'), as: :select, choices:, at: spot.call('currency'), error:, required: true, wrap: 'col-span-2' %>
+      <%= render 'desk/questions/box', label: 'Monthly price', name: field.call('monthly'), value: row['monthly'], at: spot.call('monthly'), error:, required: true, inputmode: 'decimal', wrap: 'col-span-2', placeholder: '0' %>
+      <%= render 'desk/questions/box', label: 'Note for the price table', name: field.call('note'), value: row['note'], error:, optional: true, wrap: 'col-span-6', placeholder: 'Included in the monthly support of the platform.' %>
+    </div>
+  <% when 'payment' %>
+    <div class="grid grid-cols-4 gap-3">
+      <%= render 'desk/questions/box', label: 'Share (%)', name: field.call('percent'), value: row['percent'], at: spot.call('percent'), error:, required: true, autofocus:, inputmode: 'decimal', placeholder: '25' %>
+      <%= render 'desk/questions/box', label: 'When it is paid', name: field.call('when'), value: row['when'], at: spot.call('when'), error:, required: true, wrap: 'col-span-3', placeholder: 'On signature of this variation' %>
+    </div>
+  <% when 'terms' %>
+    <% kinds = [['A term', 'term'], ['Not included, in the whole variation', 'not_included']] + items.map { |item| ["Not included, in #{item.name}", "not_included:#{item.name}"] } %>
+    <div class="grid grid-cols-5 gap-3">
+      <%= render 'desk/questions/box', label: 'What it is', name: field.call('kind'), as: :select, choices: options_for_select(kinds, row['kind'].presence || 'term'), at: spot.call('kind'), error:, wrap: 'col-span-3' %>
+      <%= render 'desk/questions/box', label: 'Label, for a term', name: field.call('label'), value: row['label'], error:, optional: true, wrap: 'col-span-2', placeholder: 'Warranty' %>
+      <%= render 'desk/questions/box', label: 'Text', name: field.call('text'), value: row['text'], at: spot.call('text'), error:, as: :textarea, autofocus:, wrap: 'col-span-5', placeholder: '90 days from acceptance, as for the platform.' %>
+    </div>
+  <% end %>
+</div>

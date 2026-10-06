@@ -1,0 +1,19 @@
+<%# The PDF as WE Sign holds it, page by page, with the signing boxes of each signer in that signer's colour. %>
+<% attachment = template.documents.find_by(uuid: template.schema.first&.dig('attachment_uuid')) %>
+<% if attachment %>
+  <% colors = template.submitters.each_with_index.to_h { |s, i| [s['uuid'], desk_party_color(i)] } %>
+  <% fields = local_assigns[:with_boxes] ? template.fields.flat_map { |f| f['areas'].to_a.map { |a| [f, a] } }.select { |(_, a)| a['attachment_uuid'] == attachment.uuid } : [] %>
+  <div class="space-y-4">
+    <% desk_pages(attachment).each do |index, url, width, height| %>
+      <div class="relative rounded-xl overflow-hidden border border-base-300 bg-white" style="aspect-ratio: <%= width %> / <%= height %>">
+        <img src="<%= url %>" width="<%= width %>" height="<%= height %>" class="w-full h-auto" loading="lazy" alt="Page <%= index + 1 %>">
+        <% fields.select { |(_, a)| a['page'].to_i == index }.each do |field, area| %>
+          <% color = colors[field['submitter_uuid']] || '#888888' %>
+          <div class="absolute flex items-center justify-center text-[10px] font-medium overflow-hidden rounded" style="left: <%= area['x'].to_f * 100 %>%; top: <%= area['y'].to_f * 100 %>%; width: <%= area['w'].to_f * 100 %>%; height: <%= area['h'].to_f * 100 %>%; background: <%= color %>2e; border: 1.5px solid <%= color %>; color: <%= color %>">
+            <%= field['name'] %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

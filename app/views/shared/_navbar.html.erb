@@ -17,6 +17,7 @@
       <% else %>
         <div class="flex items-center justify-center space-x-4 mr-1">
           <%= render 'shared/navbar_buttons' %>
+          <%= link_to 'Contract desk', desk_root_path, class: 'hidden md:inline-flex font-medium text-lg', id: 'desk_button' %>
           <%= link_to t('settings'), settings_profile_index_path, class: 'hidden md:inline-flex font-medium text-lg', id: 'account_settings_button' %>
         </div>
       <% end %>

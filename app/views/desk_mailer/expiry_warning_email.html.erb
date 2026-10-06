@@ -1,0 +1,9 @@
+<p>The signing links of <b><%= @document.name %></b> expire on <%= l(@document.submission.expire_at.in_time_zone(@account.timezone), format: :long) %>.</p>
+<p>Not signed yet:</p>
+<ul>
+  <% @waiting.each do |submitter| %>
+    <li><%= submitter.name.presence || submitter.email %> (<%= submitter.email %>)</li>
+  <% end %>
+</ul>
+<p><a href="<%= desk_document_url(@document) %>">Open the document in the contract desk</a></p>
+<p><%= @account.name %></p>

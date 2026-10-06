@@ -1,0 +1,80 @@
+<%= render 'desk/nav', current: :questions %>
+<% open_count = @siblings.count(&:open?) %>
+<div class="max-w-2xl">
+  <p class="text-sm text-base-content/60 mb-1">
+    <%= link_to @document.name, desk_document_path(@document), class: 'hover:underline' %>
+    <% if open_count.positive? %> · <%= pluralize(open_count, 'question') %> left<% end %>
+  </p>
+  <h1 class="text-2xl font-bold mb-6"><%= @question.prompt %></h1>
+  <% if !@question.open? %>
+    <div class="rounded-2xl bg-base-200 p-6">
+      <p>Answered<%= " by #{@question.answered_by_user.full_name}" if @question.answered_by_user %> on <%= desk_time(@question.answered_at) %>: <b class="font-medium"><%= @question.answer %></b></p>
+      <%= link_to 'Back to the document', desk_document_path(@document), class: 'white-button mt-4' %>
+    </div>
+  <% elsif @question.kind == 'confirm_client' && @client %>
+    <div class="rounded-2xl bg-base-200 p-6 space-y-4">
+      <dl class="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
+        <dt class="text-base-content/60">Legal name</dt><dd class="col-span-2 font-medium"><%= @client.legal_name %></dd>
+        <dt class="text-base-content/60">Country</dt><dd class="col-span-2"><%= @client.country.presence || 'not in the document' %></dd>
+        <dt class="text-base-content/60">Address</dt><dd class="col-span-2"><%= @client.address.presence || 'not in the document' %></dd>
+        <dt class="text-base-content/60">Tax number</dt><dd class="col-span-2"><%= @client.tax_number.presence || 'not in the document' %></dd>
+        <dt class="text-base-content/60">Source</dt><dd class="col-span-2"><%= @client.source %></dd>
+      </dl>
+      <%= form_with url: desk_question_path(@question), method: :patch do %>
+        <input type="hidden" name="answer" value="Yes">
+        <button class="base-button w-full" type="submit">Yes, add it to the register</button>
+      <% end %>
+      <%= link_to 'Correct the details first', edit_desk_client_path(@client), class: 'white-button w-full' %>
+    </div>
+  <% elsif @question.kind == 'choose_client' %>
+    <%= form_with url: desk_question_path(@question), method: :patch, class: 'rounded-2xl bg-base-200 p-6 space-y-4' do %>
+      <% clients = Desk::Client.active.where(account_id: current_account.id).order(:legal_name) %>
+      <select name="answer" required class="select select-bordered w-full bg-white" aria-label="Client">
+        <option value="">Choose a client</option>
+        <% clients.each do |client| %>
+          <%= tag.option("#{client.legal_name}#{' (new, please confirm)' if client.new_please_confirm?}", value: client.id, selected: @document.client_id == client.id) %>
+        <% end %>
+      </select>
+      <button class="base-button w-full" type="submit">Answer</button>
+      <%= link_to 'Add a client to the register', new_desk_client_path, class: 'white-button w-full' %>
+    <% end %>
+  <% elsif @question.kind == 'form' %>
+    <%= render 'desk/questions/form', question: @question, document: @document, given: @given || {}, error: @error %>
+  <% elsif @question.kind == 'text' %>
+    <%= form_with url: desk_question_path(@question), method: :patch, class: 'rounded-2xl bg-base-200 p-6 space-y-4' do %>
+      <div class="text-sm text-base-content/60">For example:<div class="mt-1 whitespace-pre-wrap font-mono text-xs bg-white rounded-lg border border-base-300 p-3"><%= @question.example %></div></div>
+      <% previous = Desk::Variation.given(@document)[@question.key.delete_prefix('variation:')] %>
+      <input name="answer" type="text" required autofocus autocomplete="off" class="base-input w-full" value="<%= previous %>" aria-label="Answer">
+      <button class="base-button w-full" type="submit">Answer</button>
+    <% end %>
+  <% elsif @question.kind == 'fix_fields' %>
+    <div class="rounded-2xl bg-base-200 p-6 space-y-4">
+      <p class="text-sm text-base-content/60">The editor opens the document as WE Sign holds it. Each signer has a colour; add a Signature box for the signer named above, save, and come back here.</p>
+      <%= link_to 'Open the editor', edit_template_path(@document.template), class: 'white-button w-full' if @document.template %>
+      <%= form_with url: desk_question_path(@question), method: :patch do %>
+        <input type="hidden" name="answer" value="Placed in the editor">
+        <button class="base-button w-full" type="submit">Done: check it again</button>
+      <% end %>
+    </div>
+  <% elsif @question.kind == 'acknowledge' %>
+    <div class="rounded-2xl bg-base-200 p-6 space-y-4">
+      <% if @question.context['page'] %><p class="text-sm text-base-content/60">Page <%= @question.context['page'] %> of the document.</p><% end %>
+      <%= form_with url: desk_question_path(@question), method: :patch, class: 'space-y-4' do %>
+        <label class="block">
+          <span class="block text-sm font-medium mb-1">A note for the record (optional)</span>
+          <textarea name="answer" rows="2" class="base-textarea w-full" placeholder="For example: agreed by phone, the appendix follows separately"></textarea>
+        </label>
+        <button class="base-button w-full" type="submit">Noted: carry on</button>
+      <% end %>
+      <%= button_to 'Stop: do not send this document', decline_desk_document_path(@document), class: 'btn btn-ghost w-full', form: { data: { turbo_confirm: 'Do not send this document? It is archived, not deleted.' } } %>
+    </div>
+  <% else %>
+    <%= form_with url: desk_question_path(@question), method: :patch, class: 'rounded-2xl bg-base-200 p-6 space-y-4' do %>
+      <label class="block">
+        <span class="block text-sm text-base-content/60 mb-2">For example: <%= @question.example %></span>
+        <input name="answer" type="<%= @question.kind == 'email' ? 'email' : 'text' %>" required autofocus autocomplete="off" class="base-input w-full" placeholder="<%= @question.example %>">
+      </label>
+      <button class="base-button w-full" type="submit">Answer</button>
+    <% end %>
+  <% end %>
+</div>

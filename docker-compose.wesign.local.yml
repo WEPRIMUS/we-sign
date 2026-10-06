@@ -69,6 +69,10 @@ services:
       PRODUCT_NAME: ${PRODUCT_NAME:-WE Sign}         # the one naming setting (lib/docuseal.rb)
       SOURCE_CODE_URL: ${SOURCE_CODE_URL:-}          # empty = the default in lib/docuseal.rb
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@wesign.test}
+      # Contract Desk: the reading model of this installation, any OpenAI-compatible endpoint (lib/desk/ai_client.rb)
+      DESK_AI_ENDPOINT: ${DESK_AI_ENDPOINT:-}
+      DESK_AI_MODEL: ${DESK_AI_MODEL:-}
+      DESK_AI_API_KEY: ${DESK_AI_API_KEY:-}
     volumes:
       - wesign_ds_app_data:/data/docuseal  # uploaded and signed documents, embedded redis dump
     networks: [wesign_ds_net]

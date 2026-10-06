@@ -1,0 +1,31 @@
+<%= render 'desk/nav', current: :clients %>
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-3xl font-bold">Clients</h1>
+  <%= link_to new_desk_client_path, class: 'btn btn-primary gap-2' do %><%= svg_icon('plus', class: 'w-5 h-5') %><span>Add a client</span><% end %>
+</div>
+<div class="flex gap-2 mb-5 text-sm">
+  <% [['All', nil], ['New, please confirm', 'new_please_confirm'], ['Archived', 'archived']].each do |label, status| %>
+    <%= link_to label, desk_clients_path(status:), class: "px-3 py-1.5 rounded-lg #{params[:status] == status ? 'bg-base-200 font-medium' : 'hover:bg-base-200'}" %>
+  <% end %>
+</div>
+<% if @clients.empty? %>
+  <p class="text-base-content/60">No clients here.</p>
+<% else %>
+  <div class="overflow-x-auto rounded-xl border border-base-300 bg-white">
+    <table class="table">
+      <thead><tr><th>Legal name</th><th>Country</th><th>Tax number</th><th>Signers</th><th>Documents</th><th></th></tr></thead>
+      <tbody>
+        <% @clients.each do |client| %>
+          <tr class="hover">
+            <td><%= link_to client.legal_name, desk_client_path(client), class: 'font-medium hover:underline' %><% if client.trading_name.present? %><div class="text-xs text-base-content/60"><%= client.trading_name %></div><% end %></td>
+            <td><%= client.country %></td>
+            <td><%= client.tax_number %></td>
+            <td><%= client.signers.size %></td>
+            <td><%= @document_counts[client.id].to_i %></td>
+            <td><% if client.new_please_confirm? %><span class="badge badge-warning bg-opacity-50 whitespace-nowrap">New, please confirm</span><% end %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

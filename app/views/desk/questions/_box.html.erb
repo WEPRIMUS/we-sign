@@ -1,0 +1,15 @@
+<%# One box of a question form: its label, the field, and under it the reason when the code refused what was written there. %>
+<% wrong = local_assigns[:at].present? && error&.field == at %>
+<% css = class_names('w-full', '!border-red-600' => wrong) %>
+<% placeholder = "e.g. #{local_assigns[:placeholder]}" if local_assigns[:placeholder] %>
+<label class="block <%= local_assigns[:wrap] %>">
+  <span class="block text-xs font-medium text-base-content/70 mb-1"><%= label %><% if local_assigns[:optional] %> <span class="font-normal">(optional)</span><% end %></span>
+  <% if local_assigns[:as] == :select %>
+    <%= select_tag name, choices, id: nil, required: local_assigns[:required], class: "base-select #{css}", aria: { invalid: wrong } %>
+  <% elsif local_assigns[:as] == :textarea %>
+    <%= text_area_tag name, local_assigns[:value], id: nil, rows: 2, required: local_assigns[:required], autofocus: local_assigns[:autofocus], placeholder:, class: "base-textarea #{css}", aria: { invalid: wrong } %>
+  <% else %>
+    <%= text_field_tag name, local_assigns[:value], id: nil, autocomplete: 'off', required: local_assigns[:required], autofocus: local_assigns[:autofocus], placeholder:, inputmode: local_assigns[:inputmode], class: "base-input #{css}", aria: { invalid: wrong } %>
+  <% end %>
+  <% if wrong %><span class="block text-sm text-red-600 mt-1"><%= error.message %></span><% end %>
+</label>

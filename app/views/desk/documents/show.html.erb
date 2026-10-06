@@ -1,0 +1,83 @@
+<%= render 'desk/refresh' if @document.state == 'preparing' %>
+<%= render 'desk/nav', current: :documents %>
+<div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+  <div class="min-w-0">
+    <h1 class="text-3xl font-bold break-words"><%= @document.name %></h1>
+    <div class="flex flex-wrap items-center gap-2 mt-2 text-sm">
+      <%= desk_state_badge(@document.state) %>
+      <span><%= desk_doc_type(@document.doc_type) %></span>
+      <% if @document.number.present? %><span>· <%= desk_number(@document) %></span><% end %>
+      <% if @document.client %><span>· <%= link_to @document.client.legal_name, desk_client_path(@document.client), class: 'hover:underline' %></span><% end %>
+    </div>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <% case @document.state %>
+    <% when 'ready_to_send' %>
+      <%= form_with url: review_desk_document_path(@document), method: :get do %><button class="base-button" type="submit">Review and send</button><% end %>
+    <% when 'waiting_for_you' %>
+      <% if @open_questions.any? %>
+        <%= form_with url: desk_question_path(@open_questions.first), method: :get do %><button class="base-button" type="submit">Answer <%= pluralize(@open_questions.size, 'question') %></button><% end %>
+      <% else %>
+        <%= button_to 'Try again', retry_desk_document_path(@document), class: 'base-button' %>
+      <% end %>
+    <% when 'signed' %>
+      <%= form_with url: download_desk_document_path(@document, kind: 'signed'), method: :get, data: { turbo: false } do %><button class="base-button" type="submit">Download the signed PDF</button><% end %>
+      <%= link_to 'Audit record', download_desk_document_path(@document, kind: 'audit'), class: 'white-button', data: { turbo: false } %>
+    <% end %>
+    <%= link_to 'Original file', download_desk_document_path(@document, kind: 'source'), class: 'white-button', data: { turbo: false } %>
+    <% unless @document.out_for_signature? || @document.state == 'archived' %>
+      <%= button_to 'Archive', archive_desk_document_path(@document), class: 'btn btn-ghost', form: { data: { turbo_confirm: 'Archive this document? It is kept, not deleted.' } } %>
+    <% end %>
+  </div>
+</div>
+<% if @document.last_error.present? %>
+  <div class="rounded-xl border border-red-300 bg-white px-4 py-3 mb-6 text-sm"><b class="font-medium">The desk stopped:</b> <%= @document.last_error %> <span class="text-base-content/60">(<%= desk_time(@document.last_error_at) %>)</span></div>
+<% end %>
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+  <div class="lg:col-span-3">
+    <% signed = @document.signed_pdf.attachment if @document.state == 'signed' %>
+    <% if signed&.preview_images&.exists? %>
+      <p class="text-sm text-base-content/60 mb-2">The signed PDF, as fetched from WE Sign.</p>
+      <div class="space-y-4">
+        <% desk_pages(signed).each do |index, url, width, height| %>
+          <div class="rounded-xl overflow-hidden border border-base-300 bg-white">
+            <img src="<%= url %>" width="<%= width %>" height="<%= height %>" class="w-full h-auto" loading="lazy" alt="Signed page <%= index + 1 %>">
+          </div>
+        <% end %>
+      </div>
+    <% elsif @document.template %>
+      <%= render 'desk/documents/pages', template: @document.template, with_boxes: !@document.out_for_signature? && @document.state != 'signed' %>
+    <% else %>
+      <div class="rounded-2xl bg-base-200 p-6 text-base-content/60">The pages appear here once the desk has prepared the document.</div>
+    <% end %>
+  </div>
+  <div class="lg:col-span-2 space-y-6">
+    <% if @document.submission && (@document.out_for_signature? || %w[signed declined expired].include?(@document.state)) %>
+      <section class="rounded-2xl bg-base-200 p-5">
+        <h2 class="text-lg font-bold mb-3">Signers</h2>
+        <ul class="space-y-2 text-sm">
+          <% order = @document.submission.template_submitters.pluck('uuid') %>
+          <% @document.submission.submitters.sort_by { |s| order.index(s.uuid) || 0 }.each do |submitter| %>
+            <li class="flex justify-between gap-3"><span><%= submitter.name %> <span class="text-base-content/60"><%= submitter.email %></span></span><span class="badge <%= SubmissionsController::STATUS_BADGES[submitter.status] %> bg-opacity-50"><%= submitter.status.humanize %></span></li>
+          <% end %>
+        </ul>
+        <p class="text-xs text-base-content/60 mt-3">Checked <%= desk_time(@document.checked_at) %><%= " · links expire #{desk_time(@document.expire_at)}" if @document.expire_at %><%= " · reminders sent on day #{@document.reminders_sent.join(', ')}" if @document.reminders_sent.any? %></p>
+      </section>
+    <% end %>
+    <section class="rounded-2xl bg-base-200 p-5">
+      <h2 class="text-lg font-bold mb-3">What the desk read</h2>
+      <%= render 'desk/documents/facts', facts: @facts %>
+    </section>
+    <section class="rounded-2xl bg-base-200 p-5">
+      <h2 class="text-lg font-bold mb-3">Timeline</h2>
+      <ol class="space-y-2 text-sm">
+        <% @events.each do |event| %>
+          <li class="flex gap-3">
+            <span class="text-base-content/60 whitespace-nowrap w-32 shrink-0"><%= desk_time(event.created_at) %></span>
+            <span><b class="font-medium"><%= desk_actor(event) %></b>: <%= event.action %><% if event.data['error'] || event.data['reason'] %> <span class="text-base-content/60">(<%= event.data['error'] || event.data['reason'] %>)</span><% end %></span>
+          </li>
+        <% end %>
+      </ol>
+    </section>
+  </div>
+</div>

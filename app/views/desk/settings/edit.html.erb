@@ -1,0 +1,48 @@
+<%= render 'desk/nav', current: :settings %>
+<h1 class="text-3xl font-bold mb-6">Desk settings</h1>
+<%= form_with model: desk_settings, scope: :setting, url: desk_settings_path, method: :patch, class: 'space-y-6 max-w-3xl' do |f| %>
+  <% if desk_settings.errors.any? %>
+    <div class="rounded-xl border border-red-300 bg-white px-4 py-3 text-sm"><%= desk_settings.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <section class="rounded-2xl bg-base-200 p-6 space-y-4">
+    <h2 class="text-lg font-bold">Sending</h2>
+    <label class="flex items-start gap-3">
+      <%= f.check_box :sender_signs_on_approval, class: 'toggle mt-1' %>
+      <span><b class="font-medium">The person who says "Yes, send" signs for the company</b><br><span class="text-sm text-base-content/60">Their saved signature is applied to your company's party at that moment, and the log records "approved and signed by".</span></span>
+    </label>
+    <label class="flex items-start gap-3">
+      <%= f.check_box :approval_required, class: 'toggle mt-1' %>
+      <span><b class="font-medium">Approval required</b><br><span class="text-sm text-base-content/60">Only the people ticked below may say "Yes, send".</span></span>
+    </label>
+    <div class="pl-14 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+      <% @users.each do |user| %>
+        <label class="flex items-center gap-2"><%= check_box_tag 'setting[approver_user_ids][]', user.id, desk_settings.approver_user_ids.map(&:to_i).include?(user.id), class: 'base-checkbox', id: "approver_#{user.id}" %><%= user.full_name.presence || user.email %></label>
+      <% end %>
+    </div>
+  </section>
+  <section class="rounded-2xl bg-base-200 p-6 space-y-4">
+    <h2 class="text-lg font-bold">Follow-up</h2>
+    <label class="block"><span class="block text-sm font-medium mb-1">Reminders to signers, on these days after sending</span><input name="setting[reminder_days]" value="<%= desk_settings.reminder_schedule.join(', ') %>" class="base-input w-full md:w-64"></label>
+    <label class="block"><span class="block text-sm font-medium mb-1">Warn the sender this many days before the signing links expire (after 30 days)</span><%= f.number_field :expiry_warning_days, min: 0, max: 29, class: 'base-input w-32' %></label>
+  </section>
+  <section class="rounded-2xl bg-base-200 p-6 space-y-4">
+    <h2 class="text-lg font-bold">Our company</h2>
+    <p class="text-sm text-base-content/60">The desk fills our side of every document from here and never asks about it. Where a document says something different, the review shows it.</p>
+    <% profile = desk_settings.profile %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <% [['legal_name', 'Legal name'], ['place', 'Place, as written after our name (e.g. the free zone and country)'], ['address', 'Registered address'], ['country', 'Country (two letters)'], ['licence_number', 'Licence or registration number'], ['licence_expiry', 'Licence expiry (YYYY-MM-DD)'], ['tax_number', 'Tax number (if any)'], ['vat_rate', 'VAT rate in our country (%)'], ['signer_name', 'Default signer'], ['signer_title', "Default signer's title"], ['signer_email', "Default signer's e-mail"], ['document_prefix', 'Prefix of our document numbers (e.g. SP)']].each do |key, label| %>
+        <label class="block"><span class="block text-sm font-medium mb-1"><%= label %></span><%= text_field_tag "setting[own_profile][#{key}]", profile[key], class: 'base-input w-full', id: "profile_#{key}", autocomplete: 'off' %></label>
+      <% end %>
+    </div>
+  </section>
+  <section class="rounded-2xl bg-base-200 p-6 space-y-4">
+    <h2 class="text-lg font-bold">Names our company appears under</h2>
+    <label class="block"><span class="block text-sm font-medium mb-1">One name per line (the legal name above is always included)</span><textarea name="setting[own_party_names]" rows="3" class="base-textarea w-full"><%= desk_settings.own_party_names.join("\n") %></textarea></label>
+  </section>
+  <section class="rounded-2xl bg-base-200 p-6 space-y-2 text-sm">
+    <h2 class="text-lg font-bold">Reading model</h2>
+    <p>Set for the whole installation by its administrator (not on this page).</p>
+    <p>Provider: <b class="font-medium"><%= Desk::AiClient.endpoint_host || 'not set' %></b> · Model: <b class="font-medium"><%= Desk::AiClient.model || 'not set' %></b> · Key: <b class="font-medium"><%= Desk::AiClient.configured? ? 'set' : 'not set' %></b></p>
+  </section>
+  <button class="base-button" type="submit">Save</button>
+<% end %>

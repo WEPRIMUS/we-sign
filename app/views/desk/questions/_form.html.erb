@@ -1,0 +1,49 @@
+<%# A question asked in labelled boxes (kind 'form'). Desk::Variation checks every box; a refusal comes back here, under the box it is about, with what was written kept. %>
+<% key = question.key.delete_prefix('variation:') %>
+<% rows = Array(given['rows']) %>
+<% with_rows = %w[items payment terms].include?(key) %>
+<% items = Desk::Variation.given_items(document) if %w[scope terms].include?(key) %>
+<%= form_with url: desk_question_path(question), method: :patch, class: 'rounded-2xl bg-base-200 p-6 space-y-4' do %>
+  <% if key == 'parent' %>
+    <%= render 'desk/questions/box', label: 'Title of the agreement', name: 'answer[title]', value: given['title'], at: 'title', error:, required: true, autofocus: true, placeholder: 'Software Platform Services Agreement' %>
+    <div class="grid grid-cols-2 gap-4">
+      <%= render 'desk/questions/box', label: 'Its reference', name: 'answer[reference]', value: given['reference'], at: 'reference', error:, required: true, placeholder: 'SA-2026-001' %>
+      <%= render 'desk/questions/box', label: 'Its date', name: 'answer[date]', value: given['date'], at: 'date', error:, required: true, placeholder: '4 August 2026' %>
+    </div>
+    <%= render 'desk/questions/box', label: 'The clauses that allow a variation', name: 'answer[clauses]', value: given['clauses'], at: 'clauses', error:, required: true, placeholder: 'clauses 12.1 and 15.2' %>
+  <% elsif key == 'scope' %>
+    <% items.each_with_index do |item, i| %>
+      <% row = rows.find { |r| r['name'].to_s.casecmp?(item.name) } || {} %>
+      <div class="rounded-xl bg-white/60 border border-base-300 p-4 space-y-3">
+        <p class="font-medium"><%= item.name %></p>
+        <%= hidden_field_tag 'answer[rows][][name]', item.name, id: nil %>
+        <%= render 'desk/questions/box', label: 'What it does', name: 'answer[rows][][what]', value: row['what'], at: "rows.#{i}.what", error:, as: :textarea, required: true, autofocus: i.zero?, placeholder: 'Customers get an estimate on the website, and the request lands in the back office' %>
+        <%= render 'desk/questions/box', label: 'Where it stands', name: 'answer[rows][][status]', value: row['status'], error:, optional: true, placeholder: 'built, in review' %>
+        <%= render 'desk/questions/box', label: 'How it is accepted', name: 'answer[rows][][acceptance]', value: row['acceptance'], error:, optional: true, placeholder: 'a request made on the website appears in the back office' %>
+      </div>
+    <% end %>
+  <% elsif key == 'instalments' %>
+    <% choices = [['No', '']] + Desk::Variation.given_shares(document).each_with_index.map { |share, i| ["Yes: share #{i + 1}, #{share.when} (#{Desk::Variation.percent_text(share.percent)})", (i + 1).to_s] } %>
+    <%= render 'desk/questions/box', label: 'Spread over instalments of the agreement', name: 'answer[share]', as: :select, choices: options_for_select(choices, given['share']), at: 'share', error: %>
+    <p class="text-sm text-base-content/60">If yes:</p>
+    <%= render 'desk/questions/box', label: 'What the agreement calls them', name: 'answer[label]', value: given['label'], at: 'label', error:, placeholder: 'Stage 2 instalment of Appendix A' %>
+    <div class="grid grid-cols-3 gap-4">
+      <%= render 'desk/questions/box', label: 'How many', name: 'answer[times]', value: given['times'], at: 'times', error:, inputmode: 'numeric', placeholder: '6' %>
+      <%= render 'desk/questions/box', label: 'Their amount now', name: 'answer[current]', value: given['current'], at: 'current', error:, inputmode: 'decimal', placeholder: '5666.67' %>
+      <%= render 'desk/questions/box', label: 'The last one, if different', name: 'answer[last]', value: given['last'], at: 'last', error:, optional: true, inputmode: 'decimal', placeholder: '5666.65' %>
+    </div>
+  <% elsif with_rows %>
+    <desk-rows class="block space-y-4">
+      <div class="space-y-3" data-rows>
+        <% (rows.presence || [{}]).each_with_index do |row, i| %>
+          <%= render 'desk/questions/form_row', key:, row:, at: "rows.#{i}", error:, document:, items:, autofocus: i.zero? %>
+        <% end %>
+      </div>
+      <template><%= render 'desk/questions/form_row', key:, row: {}, at: nil, error: nil, document:, items:, autofocus: false %></template>
+      <button type="button" class="white-button btn-sm w-full" data-add-row>+ Add another <%= { 'items' => 'item', 'payment' => 'share', 'terms' => 'line' }[key] %></button>
+    </desk-rows>
+    <% if key == 'terms' %><p class="text-sm text-base-content/60">Nothing to add? Leave the line empty, or remove it, and answer.</p><% end %>
+  <% end %>
+  <% if error && [nil, 'rows'].include?(error.field) %><p class="text-sm text-red-600" role="alert"><%= error.message %></p><% end %>
+  <button class="base-button w-full" type="submit">Answer</button>
+<% end %>

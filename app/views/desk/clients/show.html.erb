@@ -1,0 +1,57 @@
+<%= render 'desk/nav', current: :clients %>
+<div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-3xl font-bold"><%= @client.legal_name %></h1>
+    <div class="flex flex-wrap items-center gap-2 mt-2 text-sm">
+      <% if @client.archived_at %><span class="badge badge-ghost">Archived</span><% end %>
+      <% if @client.new_please_confirm? %><span class="badge badge-warning bg-opacity-50">New, please confirm</span><% end %>
+      <span class="text-base-content/60">Source: <%= @client.source %></span>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <% if @client.new_please_confirm? %>
+      <%= button_to 'Confirm this client', confirm_desk_client_path(@client), class: 'base-button' %>
+    <% end %>
+    <%= link_to 'Edit', edit_desk_client_path(@client), class: 'white-button' %>
+    <% unless @client.archived_at %>
+      <%= button_to 'Archive', archive_desk_client_path(@client), class: 'btn btn-ghost', form: { data: { turbo_confirm: 'Archive this client? It is kept, not deleted.' } } %>
+    <% end %>
+  </div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <section class="rounded-2xl bg-base-200 p-5">
+    <h2 class="text-lg font-bold mb-3">Details</h2>
+    <dl class="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
+      <dt class="text-base-content/60">Trading name</dt><dd class="col-span-2"><%= @client.trading_name %></dd>
+      <dt class="text-base-content/60">Country</dt><dd class="col-span-2"><%= @client.country %></dd>
+      <dt class="text-base-content/60">Address</dt><dd class="col-span-2"><%= @client.address %></dd>
+      <dt class="text-base-content/60">Tax number</dt><dd class="col-span-2"><%= @client.tax_number %></dd>
+      <dt class="text-base-content/60">Currency</dt><dd class="col-span-2"><%= @client.default_currency %></dd>
+      <dt class="text-base-content/60">Payment terms</dt><dd class="col-span-2"><%= @client.payment_terms %></dd>
+    </dl>
+  </section>
+  <section class="rounded-2xl bg-base-200 p-5">
+    <h2 class="text-lg font-bold mb-3">Signers</h2>
+    <% if @client.signers.empty? %>
+      <p class="text-sm text-base-content/60">None yet. The desk asks for them when a document needs them.</p>
+    <% else %>
+      <ul class="space-y-2 text-sm">
+        <% @client.signers.each do |signer| %>
+          <li><b class="font-medium"><%= signer['name'] %></b><%= ", #{signer['role']}" if signer['role'].present? %><br><span class="text-base-content/60"><%= signer['email'].presence || 'no e-mail yet' %></span></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+  <section class="rounded-2xl bg-base-200 p-5 lg:col-span-2">
+    <h2 class="text-lg font-bold mb-3">Documents</h2>
+    <% if @documents.empty? %>
+      <p class="text-sm text-base-content/60">No documents yet.</p>
+    <% else %>
+      <ul class="space-y-2 text-sm">
+        <% @documents.each do |document| %>
+          <li class="flex justify-between gap-3"><%= link_to document.name, desk_document_path(document), class: 'hover:underline' %><%= desk_state_badge(document.state) %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+</div>

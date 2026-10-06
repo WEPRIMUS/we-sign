@@ -103,6 +103,10 @@ module Brand
   def legal_name = @config['legal_name'].presence
   def page_color = @config['page_color']
 
+  # How the PDFs this installation draws look (the Contract Desk's generated documents): font files in the pack and
+  # colours, as `document_style` in pack.yml. Empty when the pack sets none: the document then uses plain defaults.
+  def document_style = @config['document_style'] || {}
+
   # The country of the legal entity (ISO 3166 alpha-2), the C= of the self-made signing certificate, or nil: the
   # certificate then names no country.
   def legal_country = @config['legal_country'].presence

@@ -12,6 +12,8 @@ Rails.application.routes.draw do
   root 'dashboard#index'
 
   get 'up' => 'rails/health#show'
+
+  draw :desk # WE Sign: the Contract Desk (config/routes/desk.rb)
   get 'manifest' => 'pwa#manifest'
 
   # WE Sign: the files of the selected brand pack (lib/brand.rb), and the icon browsers ask for by name

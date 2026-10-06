@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -157,6 +157,150 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_100000) do
     t.datetime "updated_at", null: false
     t.string "username", null: false
     t.index ["username"], name: "index_console1984_users_on_username"
+  end
+
+  create_table "desk_clients", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.text "address"
+    t.datetime "archived_at"
+    t.datetime "confirmed_at"
+    t.bigint "confirmed_by_user_id"
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.bigint "created_by_user_id"
+    t.string "default_currency"
+    t.string "legal_name", null: false
+    t.string "normalized_name", null: false
+    t.string "normalized_tax_number"
+    t.string "payment_terms"
+    t.jsonb "signers", default: [], null: false
+    t.string "source", null: false
+    t.bigint "source_document_id"
+    t.string "status", default: "confirmed", null: false
+    t.string "tax_number"
+    t.string "trading_name"
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "normalized_name"], name: "index_desk_clients_one_per_name", unique: true, where: "(archived_at IS NULL)"
+    t.index ["account_id", "normalized_tax_number"], name: "index_desk_clients_one_per_tax_number", unique: true, where: "((archived_at IS NULL) AND (normalized_tax_number IS NOT NULL))"
+    t.index ["account_id"], name: "index_desk_clients_on_account_id"
+  end
+
+  create_table "desk_documents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.datetime "approved_at"
+    t.bigint "approved_by_user_id"
+    t.datetime "archived_at"
+    t.datetime "checked_at"
+    t.bigint "client_id"
+    t.datetime "created_at", null: false
+    t.bigint "created_by_user_id", null: false
+    t.datetime "declined_at"
+    t.string "doc_type"
+    t.datetime "expire_at"
+    t.datetime "expired_at"
+    t.datetime "expiry_warned_at"
+    t.string "file_sha256", null: false
+    t.string "filename"
+    t.string "follow_up_token"
+    t.text "last_error"
+    t.datetime "last_error_at"
+    t.string "number"
+    t.datetime "opened_at"
+    t.datetime "processing_started_at"
+    t.jsonb "reminders_sent", default: [], null: false
+    t.string "revision"
+    t.datetime "sent_at"
+    t.bigint "sent_by_user_id"
+    t.datetime "signed_at"
+    t.string "source", default: "upload", null: false
+    t.string "state", default: "preparing", null: false
+    t.bigint "submission_id"
+    t.bigint "template_id"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.string "uuid", null: false
+    t.index ["account_id", "file_sha256"], name: "index_desk_documents_one_per_file", unique: true
+    t.index ["account_id", "state"], name: "index_desk_documents_on_account_id_and_state"
+    t.index ["account_id"], name: "index_desk_documents_on_account_id"
+    t.index ["client_id"], name: "index_desk_documents_on_client_id"
+    t.index ["uuid"], name: "index_desk_documents_on_uuid", unique: true
+  end
+
+  create_table "desk_events", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "action", null: false
+    t.string "actor", null: false
+    t.bigint "client_id"
+    t.datetime "created_at", null: false
+    t.jsonb "data", default: {}, null: false
+    t.bigint "document_id"
+    t.bigint "user_id"
+    t.index ["account_id"], name: "index_desk_events_on_account_id"
+    t.index ["client_id"], name: "index_desk_events_on_client_id"
+    t.index ["document_id"], name: "index_desk_events_on_document_id"
+  end
+
+  create_table "desk_facts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.float "confidence"
+    t.datetime "created_at", null: false
+    t.bigint "document_id", null: false
+    t.string "key", null: false
+    t.string "method"
+    t.string "origin", null: false
+    t.string "run_id", null: false
+    t.jsonb "source_ref", default: {}, null: false
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "value", default: {}, null: false
+    t.index ["account_id"], name: "index_desk_facts_on_account_id"
+    t.index ["document_id"], name: "index_desk_facts_on_document_id"
+  end
+
+  create_table "desk_number_registers", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "last_number", default: 0, null: false
+    t.string "prefix", null: false
+    t.datetime "updated_at", null: false
+    t.integer "year", null: false
+    t.index ["account_id", "prefix", "year"], name: "index_desk_number_registers_one_per_series", unique: true
+    t.index ["account_id"], name: "index_desk_number_registers_on_account_id"
+  end
+
+  create_table "desk_questions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.text "answer"
+    t.datetime "answered_at"
+    t.bigint "answered_by_user_id"
+    t.jsonb "context", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.bigint "document_id", null: false
+    t.string "example"
+    t.string "key", null: false
+    t.string "kind", null: false
+    t.integer "position", default: 0, null: false
+    t.text "prompt", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_desk_questions_on_account_id"
+    t.index ["document_id", "key"], name: "index_desk_questions_on_document_id_and_key", unique: true
+    t.index ["document_id"], name: "index_desk_questions_on_document_id"
+  end
+
+  create_table "desk_settings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "approval_required", default: false, null: false
+    t.jsonb "approver_user_ids", default: [], null: false
+    t.datetime "created_at", null: false
+    t.integer "expiry_warning_days", default: 3, null: false
+    t.jsonb "own_party_names", default: [], null: false
+    t.jsonb "own_profile", default: {}, null: false
+    t.jsonb "reminder_days", default: [3, 7, 14], null: false
+    t.boolean "sender_signs_on_approval", default: true, null: false
+    t.jsonb "signer_titles", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_desk_settings_on_account_id", unique: true
   end
 
   create_table "document_generation_events", force: :cascade do |t|
@@ -595,6 +739,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_100000) do
   add_foreign_key "account_linked_accounts", "accounts", column: "linked_account_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "desk_clients", "accounts"
+  add_foreign_key "desk_documents", "accounts"
+  add_foreign_key "desk_documents", "desk_clients", column: "client_id"
+  add_foreign_key "desk_events", "accounts"
+  add_foreign_key "desk_events", "desk_clients", column: "client_id"
+  add_foreign_key "desk_events", "desk_documents", column: "document_id"
+  add_foreign_key "desk_facts", "accounts"
+  add_foreign_key "desk_facts", "desk_documents", column: "document_id"
+  add_foreign_key "desk_number_registers", "accounts"
+  add_foreign_key "desk_questions", "accounts"
+  add_foreign_key "desk_questions", "desk_documents", column: "document_id"
+  add_foreign_key "desk_settings", "accounts"
   add_foreign_key "document_generation_events", "submitters"
   add_foreign_key "document_metadata", "accounts"
   add_foreign_key "dynamic_document_versions", "dynamic_documents"

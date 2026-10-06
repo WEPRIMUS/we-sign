@@ -1,0 +1,28 @@
+<%= form_with model: @client, scope: :client, url: @client.persisted? ? desk_client_path(@client) : desk_clients_path, class: 'rounded-2xl bg-base-200 p-6 space-y-4 max-w-3xl' do |f| %>
+  <% if @client.errors.any? %>
+    <div class="rounded-xl border border-red-300 bg-white px-4 py-3 text-sm"><%= @client.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <label class="block"><span class="block text-sm font-medium mb-1">Legal name</span><%= f.text_field :legal_name, required: true, class: 'base-input w-full' %></label>
+    <label class="block"><span class="block text-sm font-medium mb-1">Trading name</span><%= f.text_field :trading_name, class: 'base-input w-full' %></label>
+    <label class="block"><span class="block text-sm font-medium mb-1">Country (two letters, e.g. AE)</span><%= f.text_field :country, maxlength: 2, class: 'base-input w-full' %></label>
+    <label class="block"><span class="block text-sm font-medium mb-1">Tax number</span><%= f.text_field :tax_number, class: 'base-input w-full' %></label>
+    <label class="block md:col-span-2"><span class="block text-sm font-medium mb-1">Address</span><%= f.text_area :address, rows: 2, class: 'base-textarea w-full' %></label>
+    <label class="block"><span class="block text-sm font-medium mb-1">Default currency</span><%= f.text_field :default_currency, maxlength: 3, class: 'base-input w-full' %></label>
+    <label class="block"><span class="block text-sm font-medium mb-1">Payment terms</span><%= f.text_field :payment_terms, class: 'base-input w-full' %></label>
+  </div>
+  <div>
+    <div class="text-sm font-medium mb-2">Signers</div>
+    <% rows = @client.signers + Array.new([4 - @client.signers.size, 1].max) { {} } %>
+    <div class="space-y-2">
+      <% rows.each_with_index do |signer, index| %>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <input name="client[signers][<%= index %>][name]" value="<%= signer['name'] %>" autocomplete="name" placeholder="Name" class="base-input w-full" aria-label="Signer <%= index + 1 %> name">
+          <input name="client[signers][<%= index %>][role]" value="<%= signer['role'] %>" autocomplete="organization-title" placeholder="Title" class="base-input w-full" aria-label="Signer <%= index + 1 %> title">
+          <input name="client[signers][<%= index %>][email]" value="<%= signer['email'] %>" type="email" autocomplete="email" placeholder="E-mail" class="base-input w-full" aria-label="Signer <%= index + 1 %> e-mail">
+        </div>
+      <% end %>
+    </div>
+  </div>
+  <button class="base-button" type="submit">Save</button>
+<% end %>
