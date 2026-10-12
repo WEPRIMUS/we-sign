@@ -311,4 +311,122 @@ RSpec.describe 'Contract Desk', :desk do
       expect(response.body).to start_with('%PDF')
     end
   end
+
+  describe 'keep informed' do
+    let(:document) { ready_document }
+
+    before do
+      Desk::Setting.for(account).update!(keep_informed: ['partner@northwind.example', user.email])
+      with_two_factor(user)
+      save_signature!(user)
+    end
+
+    # The e-mails the desk queued (deliver_later), delivered now.
+    def queued_mail
+      Sidekiq::Worker.jobs.select { |j| j['wrapped'] == 'ActionMailer::MailDeliveryJob' }
+                     .each { |j| ActiveJob::Base.execute(j['args'].first) }
+      ActionMailer::Base.deliveries
+    end
+
+    def send_document
+      sign_in(user)
+      post "/desk/documents/#{document.uuid}/approve", params: { signer_title: 'Manager' }
+      document.reload
+    end
+
+    def client_signs!
+      create(:encrypted_config, account:, key: EncryptedConfig::ESIGN_CERTS_KEY,
+                                value: GenerateCertificate.call.transform_values(&:to_pem))
+      theirs = document.submission.submitters.find { |s| s.email == 'layla@saffron.example' }
+      signature = ActiveStorage::Attachment.create!(
+        blob: ActiveStorage::Blob.create_and_upload!(io: Rails.root.join('spec/fixtures/sample-image.png').open,
+                                                     filename: 's.png', content_type: 'image/png'),
+        name: 'attachments', record: theirs
+      )
+      field = document.submission.template_fields.find do |f|
+        f['submitter_uuid'] == theirs.uuid && f['type'] == 'signature'
+      end
+      request = ActionDispatch::TestRequest.create('REQUEST_METHOD' => 'POST')
+      request.env['warden'] = instance_double(Warden::Proxy, user: nil)
+      values = { field['uuid'] => signature.uuid }
+      Submitters::SubmitValues.call(theirs, ActionController::Parameters.new(values:, completed: 'true'), request)
+      Sidekiq::Worker.clear_all
+      ActionMailer::Base.deliveries.clear
+      ProcessSubmitterCompletionJob.new.perform('submitter_id' => theirs.id) # WE Sign's own e-mails at completion
+      Desk::FollowUp.call(document.reload)
+    end
+
+    it 'is edited in Desk settings, one address per line, and refuses what is not an address' do
+      sign_in(user)
+
+      patch '/desk/settings', params: { setting: { keep_informed: "a@northwind.example\nb@northwind.example, " \
+                                                                  'A@northwind.example' } }
+      expect(Desk::Setting.for(account).keep_informed).to eq(%w[a@northwind.example b@northwind.example])
+
+      patch '/desk/settings', params: { setting: { keep_informed: 'a@northwind.example not-an-address' } }
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include('Keep informed: not an e-mail address: not-an-address')
+      expect(Desk::Setting.for(account).keep_informed).to eq(%w[a@northwind.example b@northwind.example])
+    end
+
+    it 'sends nothing while the document is prepared' do
+      document
+
+      expect(document.state).to eq('ready_to_send')
+      expect(queued_mail).to be_empty
+      expect(Sidekiq::Worker.jobs.pluck('class')).not_to include('SendSubmitterInvitationEmailJob')
+    end
+
+    it 'tells everyone on the list but the sender that the document was sent' do
+      send_document
+
+      notices = queued_mail.select { |m| m.subject == "Sent: #{document.name}" }
+      expect(notices.flat_map(&:to)).to eq(['partner@northwind.example'])
+      html = (notices.first.html_part || notices.first).body.decoded
+      expect(Nokogiri::HTML(html).text).to include("#{user.full_name} sent '#{document.name}' to Layla Haddad " \
+                                                   '(Saffron Dune Logistics L.L.C.).')
+      expect(html).to include("/desk/documents/#{document.uuid}")
+      expect(document.events.pluck(:action)).to include('keep-informed notice sent')
+    end
+
+    it 'sends no notice when the list is empty' do
+      Desk::Setting.for(account).update!(keep_informed: [])
+
+      send_document
+
+      expect(document.state).to eq('sent')
+      expect(queued_mail.map(&:subject)).not_to include(start_with('Sent:'))
+      expect(document.events.pluck(:action)).not_to include('keep-informed notice sent')
+    end
+
+    it 'sends the signed copy and the audit record to the list, and no second copy to a listed signer' do
+      Desk::Setting.for(account).update!(keep_informed: ['partner@northwind.example', 'Layla@Saffron.example',
+                                                         user.email])
+      send_document
+
+      client_signs!
+
+      expect(document.reload.state).to eq('signed')
+      copies = queued_mail.select { |m| m.attachments.any? }
+      per_address = copies.flat_map(&:to).tally
+      # the listed client and the sender (who signed for us) each get WE Sign's copy to signers, and only that one
+      expect(per_address).to eq('partner@northwind.example' => 1, 'layla@saffron.example' => 1, user.email => 1)
+      copy = copies.find { |m| m.to == ['partner@northwind.example'] }
+      expect(copy.attachments.size).to eq(2)
+      expect(copy.attachments.map(&:filename)).to include(match(/audit/i))
+      expect(document.events.pluck(:action)).to include('signed copy sent to the keep-informed list')
+    end
+
+    it 'sends the list the signed copy even when WE Sign sends no copy to signers' do
+      create(:account_config, account:, key: AccountConfig::SUBMITTER_DOCUMENTS_COPY_EMAIL_KEY,
+                              value: { 'enabled' => false })
+      Desk::Setting.for(account).update!(keep_informed: ['partner@northwind.example', 'layla@saffron.example'])
+      send_document
+
+      client_signs!
+
+      copies = queued_mail.select { |m| m.attachments.any? }
+      expect(copies.flat_map(&:to).tally).to eq('partner@northwind.example' => 1, 'layla@saffron.example' => 1)
+    end
+  end
 end

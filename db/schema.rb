@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_08_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -294,6 +294,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_200000) do
     t.jsonb "approver_user_ids", default: [], null: false
     t.datetime "created_at", null: false
     t.integer "expiry_warning_days", default: 3, null: false
+    t.jsonb "keep_informed", default: [], null: false
     t.jsonb "own_party_names", default: [], null: false
     t.jsonb "own_profile", default: {}, null: false
     t.jsonb "reminder_days", default: [3, 7, 14], null: false

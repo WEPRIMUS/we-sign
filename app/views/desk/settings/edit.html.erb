@@ -26,6 +26,10 @@
     <label class="block"><span class="block text-sm font-medium mb-1">Warn the sender this many days before the signing links expire (after 30 days)</span><%= f.number_field :expiry_warning_days, min: 0, max: 29, class: 'base-input w-32' %></label>
   </section>
   <section class="rounded-2xl bg-base-200 p-6 space-y-4">
+    <h2 class="text-lg font-bold">Keep informed</h2>
+    <label class="block"><span class="block text-sm font-medium mb-1">E-mail addresses, one per line</span><textarea name="setting[keep_informed]" rows="2" class="base-textarea w-full"><%= desk_settings.keep_informed.join("\n") %></textarea><span class="block text-sm text-base-content/60 mt-1">Each address is told when a document is sent (except the person who sent it), and gets the signed copy and the audit record when everyone has signed.</span></label>
+  </section>
+  <section class="rounded-2xl bg-base-200 p-6 space-y-4">
     <h2 class="text-lg font-bold">Our company</h2>
     <p class="text-sm text-base-content/60">The desk fills our side of every document from here and never asks about it. Where a document says something different, the review shows it.</p>
     <% profile = desk_settings.profile %>

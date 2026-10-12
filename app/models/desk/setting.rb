@@ -17,10 +17,12 @@ module Desk
     attribute :own_party_names, default: -> { [] }
     attribute :signer_titles, default: -> { {} }
     attribute :own_profile, default: -> { {} }
+    attribute :keep_informed, default: -> { [] }
 
     validates :expiry_warning_days, numericality: { only_integer: true, in: 0..29 }
     validate :reminder_days_in_range
     validate :profile_values
+    validate :keep_informed_addresses
 
     def self.for(account)
       find_or_create_by!(account_id: account.id) do |setting|
@@ -67,6 +69,12 @@ module Desk
       end && reminder_days.size <= 6
 
       errors.add(:reminder_days, 'must be up to six days between 1 and 29')
+    end
+
+    def keep_informed_addresses
+      wrong = keep_informed.to_a.map(&:to_s).grep_v(URI::MailTo::EMAIL_REGEXP)
+
+      errors.add(:base, "Keep informed: not an e-mail address: #{wrong.join(', ')}") if wrong.any?
     end
 
     def profile_values

@@ -17,7 +17,7 @@ module Desk
       settings = Setting.for(document.account)
 
       if submission.completed_at?
-        complete!(document, submission)
+        complete!(document, submission, settings)
       elsif submission.submitters.any?(&:declined_at?)
         document.transition!('declined', actor: 'system',
                                          declined_at: submission.submitters.filter_map(&:declined_at).min)
@@ -80,7 +80,7 @@ module Desk
       document.log!('expiry warning sent', actor: 'system', data: { expire_at: submission.expire_at })
     end
 
-    def complete!(document, submission)
+    def complete!(document, submission, settings)
       return document.log!('waiting for the signed PDF', actor: 'system') unless fetch_signed!(document, submission)
 
       document.transition!('signed', actor: 'system', signed_at: submission.completed_at)
@@ -91,6 +91,30 @@ module Desk
 
       DeskMailer.completed_email(document).deliver_later!
       document.log!('sender notified', actor: 'system', data: { to: document.sent_by_user&.email })
+      send_copies!(document, submission, settings)
+    end
+
+    # "Keep informed" (Desk settings): the signed copy and the audit record, as WE Sign's own completed e-mail, to each
+    # address on the list. A signer gets WE Sign's copy to signers already, so is not sent a second one. (Desk
+    # templates keep WE Sign's completed e-mail to the preparer off: the desk tells the sender itself, above.)
+    def send_copies!(document, submission, settings)
+      last = submission.submitters.reject(&:viewer?).max_by { |s| s.completed_at || Time.zone.at(0) }
+      copied = signers_with_copy(submission, last)
+      to = settings.keep_informed.reject { |address| copied.include?(address.downcase) }
+      return if to.empty?
+
+      user = submission.created_by_user || submission.template.author
+      to.each { |address| SubmitterMailer.completed_email(last, user, to: address).deliver_later! }
+      document.log!('signed copy sent to the keep-informed list', actor: 'system', data: { to: })
+    end
+
+    # The addresses WE Sign sends its copy of the signed documents to, by its own rule (ProcessSubmitterCompletionJob).
+    def signers_with_copy(submission, last)
+      configs = AccountConfigs.find_or_initialize_for_key(submission.account,
+                                                          AccountConfig::SUBMITTER_DOCUMENTS_COPY_EMAIL_KEY)
+      return [] unless ProcessSubmitterCompletionJob.new.documents_copy_email_enabled?(last, configs)
+
+      submission.submitters.reject { |s| s.preferences['send_email'] == false }.filter_map { |s| s.email&.downcase }
     end
 
     # The signed PDF and the audit record, from WE Sign into the register (each once).

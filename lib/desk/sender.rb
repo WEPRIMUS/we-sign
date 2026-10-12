@@ -76,8 +76,18 @@ module Desk
                     actor: 'person', user:, data: { ip: approval.request.remote_ip })
 
       FollowUpJob.perform_in(FollowUp::INTERVAL, 'document_id' => document.id, 'token' => token)
+      keep_informed!(document, user, settings)
 
       document
+    end
+
+    # "Keep informed" (Desk settings): everyone on the list but the sender is told, by an e-mail sent from a job.
+    def keep_informed!(document, user, settings)
+      to = settings.keep_informed.reject { |address| address.casecmp?(user.email) }
+      return if to.empty?
+
+      to.each { |address| DeskMailer.sent_email(document, address).deliver_later! }
+      document.log!('keep-informed notice sent', actor: 'system', data: { to: })
     end
 
     def own_submitter(document, submission, user)

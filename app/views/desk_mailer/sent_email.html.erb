@@ -1,0 +1,3 @@
+<p><%= @sender.full_name.presence || @sender.email %> sent '<%= @document.name %>' to <%= @signers.map { |s| s.name.presence || s.email }.to_sentence %><% if @document.client %> (<%= @document.client.legal_name %>)<% end %>.</p>
+<p><a href="<%= desk_document_url(@document) %>">Open the document in the contract desk</a></p>
+<p><%= @account.name %></p>

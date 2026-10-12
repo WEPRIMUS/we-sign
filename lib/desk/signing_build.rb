@@ -77,6 +77,8 @@ module Desk
       Result.new(problems: [], notes: ['The boxes were placed by a person in the editor.'])
     end
 
+    # WE Sign's completed e-mail (and its bcc) stays off: the desk tells the sender itself, and sends the signed copy
+    # to the "Keep informed" list of Desk settings (Desk::FollowUp).
     def create_template!(document, user)
       template = Template.create!(
         account_id: document.account_id, author: user, name: document.name.truncate(200),
