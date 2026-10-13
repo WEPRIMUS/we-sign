@@ -30,6 +30,23 @@
     <label class="block"><span class="block text-sm font-medium mb-1">E-mail addresses, one per line</span><textarea name="setting[keep_informed]" rows="2" class="base-textarea w-full"><%= desk_settings.keep_informed.join("\n") %></textarea><span class="block text-sm text-base-content/60 mt-1">Each address is told when a document is sent (except the person who sent it), and gets the signed copy and the audit record when everyone has signed.</span></label>
   </section>
   <section class="rounded-2xl bg-base-200 p-6 space-y-4">
+    <h2 class="text-lg font-bold">Invitation e-mail</h2>
+    <p class="text-sm text-base-content/60">What each signer receives with the signing link, for every document the desk prepares from now on. A document's own e-mail settings in WE Sign win over these.</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="md:col-span-2 space-y-4">
+        <label class="block"><span class="block text-sm font-medium mb-1">Subject</span><%= text_field_tag 'setting[invitation_subject]', desk_settings.invitation_email['request_email_subject'], class: 'base-input w-full', id: 'invitation_subject', autocomplete: 'off' %></label>
+        <label class="block"><span class="block text-sm font-medium mb-1">Message</span><textarea name="setting[invitation_body]" id="invitation_body" rows="11" class="base-textarea w-full"><%= desk_settings.invitation_email['request_email_body'] %></textarea></label>
+      </div>
+      <dl class="text-sm space-y-2">
+        <dt class="font-medium">Variables</dt>
+        <% [['{{submitter.first_name}}', "The signer's first name"], ['{{submitter.name}}', "The signer's full name"], ['{{template.name}}', "The document's name"], ['{{sender.name}}', 'The person who prepared it on the desk'], ['{{account.name}}', 'Your company, as in Settings, Account'], ['{{submitter.link}}', 'The signing link (added at the end if the message has none)'], ['{{submission.expire_at}}', 'When the signing link expires']].each do |variable, meaning| %>
+          <div><dt class="font-mono text-xs"><%= variable %></dt><dd class="text-base-content/60"><%= meaning %></dd></div>
+        <% end %>
+      </dl>
+    </div>
+    <p class="text-sm text-base-content/60">Leave a field empty to go back to the desk's own text.</p>
+  </section>
+  <section class="rounded-2xl bg-base-200 p-6 space-y-4">
     <h2 class="text-lg font-bold">Our company</h2>
     <p class="text-sm text-base-content/60">The desk fills our side of every document from here and never asks about it. Where a document says something different, the review shows it.</p>
     <% profile = desk_settings.profile %>

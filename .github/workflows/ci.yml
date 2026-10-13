@@ -5,16 +5,16 @@ on: [push]
 jobs:
   rubocop:
     name: Rubocop
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 4.0.5
       - name: Cache gems
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
@@ -30,16 +30,16 @@ jobs:
 
   erblint:
     name: Erblint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 4.0.5
       - name: Cache gems
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
@@ -55,18 +55,18 @@ jobs:
 
   eslint:
     name: ESLint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v7
         with:
-          node-version: 20.19.0
+          node-version: 24.18.1
       - name: Cache directory path
         id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-      - uses: actions/cache@v4
+        run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
@@ -82,16 +82,16 @@ jobs:
 
   brakeman:
     name: Brakeman
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 4.0.5
       - name: Cache gems
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
@@ -111,10 +111,10 @@ jobs:
   # WE Sign (SEC-SHP-04): known advisories against the two lockfiles. Fails when any is found.
   dependency_audit:
     name: Dependency audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Audit Gemfile.lock and yarn.lock (osv-scanner)
         run: |
           docker run --rm -v "$PWD":/src:ro \
@@ -125,10 +125,10 @@ jobs:
   # live secrets are listed, with the reason, in .gitleaksignore.
   secret_scan:
     name: Secret scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Scan the history for secrets (gitleaks)
@@ -139,7 +139,7 @@ jobs:
 
   rspec:
     name: RSpec
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     container:
       image: ruby:4.0.5-alpine
@@ -160,14 +160,14 @@ jobs:
     steps:
       - name: Install packages
         run: apk add --no-cache build-base git libpq-dev yaml-dev nodejs yarn tar zstd gzip wget unzip vips leptonica chromium
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: ${{ runner.os }}-musl-node-${{ hashFiles('**/yarn.lock') }}
       - name: Cache gems
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-musl-gem-${{ hashFiles('**/Gemfile.lock') }}

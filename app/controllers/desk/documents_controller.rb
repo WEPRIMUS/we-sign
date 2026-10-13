@@ -50,7 +50,7 @@ module Desk
     # "Yes, send": the one path that sends. Desk::Approval checks the person; Desk::Sender does the rest.
     def approve
       approval = Desk::Approval.from_request!(request:, user: current_user, true_user:)
-      Desk::Sender.call(@document, approval, title: params[:signer_title])
+      Desk::Sender.call(@document, approval, title: params[:signer_title], copy_to: params[:copy_to])
 
       redirect_to desk_document_path(@document), notice: 'Sent. The desk follows it up and tells you when it is signed.'
     rescue Desk::Approval::NotAllowed, Submitters::SubmitValues::ValidationError,

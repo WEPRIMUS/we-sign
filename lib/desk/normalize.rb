@@ -2,7 +2,7 @@
 
 module Desk
   # Deterministic keys for matching: a company name without its legal form and punctuation, a tax number of
-  # letters and digits only, a person's name in lower case.
+  # letters and digits only, a person's name in lower case without accents.
   module Normalize
     LEGAL_FORMS = %w[
       llc fze fzc fzco fzllc fz llcfz pjsc psc pty ltd limited inc incorporated co company corp corporation plc
@@ -24,7 +24,18 @@ module Desk
 
     def tax(text) = text.to_s.upcase.gsub(TAX_LABELS, '').gsub(/[^A-Z0-9]/, '').presence
 
-    def person(text) = text.to_s.downcase.gsub(/[^\p{L}\p{N}]+/, ' ').squish.presence
+    # Accents and case are ignored: "Tomás de Exemplo" and "TOMAS DE EXEMPLO" are one key.
+    def person(text)
+      text.to_s.unicode_normalize(:nfkd).gsub(/\p{Mn}/, '').downcase.gsub(/[^\p{L}\p{N}]+/, ' ').squish.presence
+    end
+
+    # One person's name written shorter or longer ("Exemplo", "Tomás de Exemplo", "Tomas De Jesus Andrade Exemplo"):
+    # every word of the shorter name is in the longer one.
+    def same_person?(left, right)
+      short, long = [person(left), person(right)].map { |name| name.to_s.split }.sort_by(&:size)
+
+      short.any? && (short - long).empty?
+    end
 
     # One normalized name contains the other on word boundaries ("najd falcon drilling services" in
     # "first party najd falcon drilling services"); a name of one short word never matches by containment.

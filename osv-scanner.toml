@@ -5,3 +5,13 @@
 id = "GHSA-5j4c-8p2g-v4jx"
 ignoreUntil = 2027-01-01
 reason = "vue 2.7.16 (ReDoS in the Vue 2 template compiler) is reached only through the eID Easy widget of the identity-verification step, which has no server route in this edition; the widget ships pre-built with its own Vue. Vue 2 has no fix: it needs Vue 3, which means eID Easy widget 3.x."
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2026-12-01
+reason = "braces 3.0.3 (stack exhaustion on deeply nested brace patterns) has no fixed version: 3.0.3 is the latest release. It is build and dev tooling only (chokidar and micromatch under webpack, webpack-dev-server, tailwindcss and sass), expanding the globs of our own config files; it is not in the browser bundles or the Rails server, and no user input reaches it. Looked at again when a fixed release exists."
+
+[[IgnoredVulns]]
+id = "GHSA-rj75-hqrm-r3gf"
+ignoreUntil = 2027-01-01
+reason = "postcss-selector-parser 6.0.13 and 6.1.4 (quadratic parsing of long flat selectors): no 6.x fix; the fix is 7.1.6, a major version their dependents do not accept (tailwindcss 3.4 and postcss-nested, the cssnano 6 plugins under css-minimizer-webpack-plugin 5, eslint-plugin-vue 9). Build and lint time only: they parse our own stylesheets and templates, never user input, and none of it ships. The 7.x copy is upgraded to 7.1.6. Leaving 6.x means tailwindcss 4, css-minimizer-webpack-plugin 7 and eslint-plugin-vue 10: a separate upgrade."

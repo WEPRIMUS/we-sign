@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_08_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_300000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -192,6 +192,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_100000) do
     t.datetime "archived_at"
     t.datetime "checked_at"
     t.bigint "client_id"
+    t.jsonb "copy_to", default: [], null: false
     t.datetime "created_at", null: false
     t.bigint "created_by_user_id", null: false
     t.datetime "declined_at"
@@ -294,7 +295,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_100000) do
     t.jsonb "approver_user_ids", default: [], null: false
     t.datetime "created_at", null: false
     t.integer "expiry_warning_days", default: 3, null: false
+    t.text "invitation_body"
+    t.string "invitation_subject"
     t.jsonb "keep_informed", default: [], null: false
+    t.string "mail_error"
+    t.datetime "mail_failed_at"
     t.jsonb "own_party_names", default: [], null: false
     t.jsonb "own_profile", default: {}, null: false
     t.jsonb "reminder_days", default: [3, 7, 14], null: false

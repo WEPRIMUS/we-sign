@@ -10,7 +10,7 @@ module Desk
 
     module_function
 
-    def call(document, approval, title: nil)
+    def call(document, approval, title: nil, copy_to: nil)
       raise NotAllowed, 'Automated code cannot send a document' if Automation.active?
       raise NotAllowed, 'Only a person can send' unless approval.is_a?(Approval)
 
@@ -26,7 +26,7 @@ module Desk
       claim!(document)
 
       begin
-        send!(document, approval, user, settings, title)
+        send!(document, approval, user, settings, title, copy_to)
       ensure
         Document.where(id: document.id).update_all(processing_started_at: nil)
       end
@@ -42,12 +42,13 @@ module Desk
       document.reload
     end
 
-    def send!(document, approval, user, settings, title)
+    def send!(document, approval, user, settings, title, copy_to)
       problems = SigningBuild.refresh!(document)
       raise NotAllowed, problems.join('. ') if problems.any?
 
       submission = document.submission.reload
       SigningBuild.verify_unchanged!(document, SigningBuild.source_attachment(document.template).download)
+      copies = copy_list(copy_to, submission, user, settings)
 
       # Signs now only if our side may be signed by this person: no name printed for it, or this person's name.
       own = own_submitter(document, submission, user) if settings.sender_signs_on_approval
@@ -69,7 +70,7 @@ module Desk
 
       document.transition!('sent', actor: 'person', user:, approval:, sent_by_user_id: user.id, sent_at: now,
                                    approved_by_user_id: user.id, approved_at: now, expire_at: submission.expire_at,
-                                   follow_up_token: token, last_error: nil, last_error_at: nil)
+                                   follow_up_token: token, last_error: nil, last_error_at: nil, copy_to: copies)
       action = "approved and sent by #{user.full_name} (#{user.email})"
       action = "approved and signed by #{user.full_name} (#{user.email}) for #{own_party_name(submission, own)}" if own
       document.log!(action,
@@ -82,12 +83,26 @@ module Desk
     end
 
     # "Keep informed" (Desk settings): everyone on the list but the sender is told, by an e-mail sent from a job.
+    # "Copy for information" (this document's review): each address is told too, with the PDF as it stands.
     def keep_informed!(document, user, settings)
       to = settings.keep_informed.reject { |address| address.casecmp?(user.email) }
-      return if to.empty?
-
       to.each { |address| DeskMailer.sent_email(document, address).deliver_later! }
-      document.log!('keep-informed notice sent', actor: 'system', data: { to: })
+      document.log!('keep-informed notice sent', actor: 'system', data: { to: }) if to.any?
+
+      copies = document.copy_to
+      copies.each { |address| DeskMailer.sent_email(document, address, attach: true).deliver_later! }
+      document.log!('copy for information sent', actor: 'system', data: { to: copies }) if copies.any?
+    end
+
+    # The "Copy for information" addresses: e-mail addresses, each once, less the signers, the sender and the "Keep
+    # informed" list (they hear of it already). A wrong address stops the send before anything goes out.
+    def copy_list(text, submission, user, settings)
+      addresses = text.to_s.split(/[\s,;]+/).compact_blank.map(&:downcase).uniq
+      wrong = addresses.grep_v(URI::MailTo::EMAIL_REGEXP)
+      raise NotAllowed, "Copy for information: not an e-mail address: #{wrong.join(', ')}" if wrong.any?
+
+      addresses - submission.submitters.filter_map { |s| s.email&.downcase } - [user.email.downcase] -
+        settings.keep_informed.map(&:downcase)
     end
 
     def own_submitter(document, submission, user)

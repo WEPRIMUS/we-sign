@@ -2,9 +2,11 @@
 
 # rubocop:disable Metrics
 module Desk
-  # Contract Desk: three fictional test documents, made on demand (never stored in a client's register).
+  # Contract Desk: four fictional test documents, made on demand (never stored in a client's register).
   # (a) a clean two-party service agreement with a two-column signature block, (b) a client-style contract with
-  # stacked signature blocks and one blank date, (c) a one-page letter that is only a scanned image (no text layer).
+  # stacked signature blocks and one blank date, (c) a one-page letter that is only a scanned image (no text layer),
+  # (d) a variation whose signature page is a ruled table under headings in spaced capitals, our signer printed and
+  # the client's two directors with blank Name lines.
   # Every company, person and number in them is invented. The installation's own party is passed in.
   module SyntheticDocuments
     CLIENTS = [
@@ -37,7 +39,8 @@ module Desk
       {
         'a-service-agreement-uae.pdf' => service_agreement(own_name),
         'b-client-contract-ksa.pdf' => client_contract(own_name),
-        'c-scanned-letter-au.pdf' => scanned_letter(own_name)
+        'c-scanned-letter-au.pdf' => scanned_letter(own_name),
+        'd-signature-table-au.pdf' => signature_table(own_name)
       }
     end
 
@@ -172,6 +175,64 @@ module Desk
       canvas.text('Date: ________________________', at: [60, 170])
 
       image_only_pdf(write(composer))
+    end
+
+    def signature_table(own_name, own_signer: 'Sam Example')
+      client = CLIENTS[2]
+
+      composer = HexaPDF::Composer.new(page_size: :A4, margin: 56)
+      composer.style(:base, font: FONT, font_size: 10.5, line_spacing: 1.3, margin: [0, 0, 8])
+      composer.style(:h1, font: "#{FONT} bold", font_size: 17, margin: [0, 0, 4])
+      composer.style(:h2, font: "#{FONT} bold", font_size: 11, margin: [10, 0, 4])
+
+      composer.text('Variation 02 - Survey Data Portal', style: :h1)
+      composer.text('Reference: VAR-2026-031   Date: 9 October 2026')
+      composer.text("This variation is made between #{own_name}, Sharjah, United Arab Emirates, and " \
+                    "#{client[:legal_name]}, #{client[:address]}, ABN #{client[:tax_number]}, under the services " \
+                    'agreement of 4 August 2026.')
+      composer.text('1. Change', style: :h2)
+      composer.text('A survey data portal is added to the services: AUD 6,400.00 one-time and AUD 180.00 a month.')
+      composer.text('2. Everything else', style: :h2)
+      composer.text('All other terms of the agreement stay as they are.')
+
+      composer.new_page
+      canvas = composer.canvas
+      canvas.font(FONT, size: 20).text('Signed for and on behalf of the Parties', at: [193, 735])
+      canvas.font(FONT, size: 10.5)
+      ["Executed by #{client[:legal_name]} under section 127 of the Corporations",
+       'Act 2001 (Cth) by two directors, or a director and company secretary.',
+       'Electronic signatures are accepted.'].each_with_index { |line, i| canvas.text(line, at: [193, 703 - (i * 16)]) }
+
+      spaced_capitals(canvas, "FOR #{own_name.upcase}", at: [57, 650], joined: false)
+      spaced_capitals(canvas, "FOR #{client[:legal_name].upcase}", at: [339, 650], joined: true)
+      canvas.line_width(0.8).line(57, 643, 539, 643).stroke
+
+      own_rows = ["Name: #{own_signer}", 'Title: Manager', 'Date:', 'Signature:']
+      client_rows = ['Name:', 'Title: Director', 'Date:', 'Signature:'] * 2
+      top = 643
+      client_rows.each_with_index do |label, i|
+        height = label == 'Signature:' ? 50 : 28
+        canvas.font(FONT, size: 10.5)
+        canvas.text(own_rows[i], at: [57, top - 18]) if own_rows[i]
+        canvas.text(label, at: [339, top - 18])
+        top -= height
+        canvas.line_width(0.4).line(57, top, 539, top).stroke
+      end
+
+      write(composer)
+    end
+
+    # A heading in spaced capitals, as report templates set it: letter by letter, written with spaces between the
+    # letters, or (joined) placed glyph by glyph with no space character at all, as browsers print such headings.
+    def spaced_capitals(canvas, text, at:, joined:, size: 7.5, spacing: 1.6)
+      canvas.font(FONT, size:)
+      return canvas.character_spacing(spacing) { canvas.text(text.chars.join(' '), at:) } unless joined
+
+      x, y = at
+      text.each_char do |char|
+        canvas.text(char, at: [x, y]) unless char == ' '
+        x += (canvas.font.decode_utf8(char).sum(&:width) * size / 1000.0) + spacing
+      end
     end
 
     def write(composer)

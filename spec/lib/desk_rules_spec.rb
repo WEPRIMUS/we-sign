@@ -213,6 +213,79 @@ RSpec.describe 'Contract Desk rules', :desk do # rubocop:disable RSpec/DescribeC
       expect(document.facts).to be_empty
     end
 
+    it 'reads a JSON object in a code fence, with words before or after it' do
+      reply = ->(content) { { choices: [{ message: { content: } }] }.to_json }
+
+      expect(Desk::AiClient.parse(reply.call("Here you are:\n```json\n{\"boxes\": []}\n```\nHope this helps.")))
+        .to eq('boxes' => [])
+      expect(Desk::AiClient.parse(reply.call('The result is {"boxes": [{"id": 1}]} as asked.')))
+        .to eq('boxes' => [{ 'id' => 1 }])
+      expect { Desk::AiClient.parse(reply.call('Sure! Here is the summary.')) }
+        .to raise_error(Desk::AiClient::Error, /could not be read/)
+    end
+
+    it 'takes a reply cut off by the length limit only where the caller checks what is missing' do
+      cut = { choices: [{ message: { content: "```json\n{\"boxes\": [{\"id\": 1, \"label\": \"a \\\"}\\\" b\"}, " \
+                                              '{"id": 2, "kind": "sig' } }] }.to_json
+
+      expect(Desk::AiClient.parse(cut, partial: true)).to eq('boxes' => [{ 'id' => 1, 'label' => 'a "}" b' }])
+      expect { Desk::AiClient.parse(cut) }.to raise_error(Desk::AiClient::Error, /could not be read/)
+    end
+
+    describe 'while placing the boxes' do
+      let(:scanned) do
+        Desk::Client.create!(account_id: account.id, legal_name: 'Wattle Creek Minerals Pty Ltd',
+                             tax_number: '51 824 753 556', source: 'Added by hand',
+                             signers: [{ name: 'Hannah Reid', role: 'Director', email: 'hannah@wattle.example' },
+                                       { name: 'Tom Brennan', role: 'Company Secretary', email: 'tom@wattle.example' }])
+        desk_upload(account:, user:, pdf: synthetic_pdf(:scanned_letter))
+      end
+
+      def prepare(document)
+        run_pipeline(document)
+        document.questions.open.each { |q| Desk::Questions.answer!(q, DeskSpecHelpers::ANSWERS.fetch(q.kind), user) }
+        run_pipeline(document)
+      end
+
+      it 'asks the person to place the boxes with Fix something, and never leaves the document stuck' do
+        unreadable = { choices: [{ message: { content: 'I cannot see the boxes on this page.' } }] }
+        stub_ai('c-scanned-letter-au-1', unreadable)
+
+        prepare(scanned)
+
+        expect(scanned.state).to eq('waiting_for_you')
+        expect(scanned.last_error).to be_nil
+        fix = scanned.questions.open.sole
+        expect(fix.kind).to eq('fix_fields')
+        expect(fix.prompt).to start_with('The automatic placement stopped (the AI reply could not be read). ' \
+                                         'No signature box was found for')
+        expect(fix.prompt).to include('Open the editor with Fix something')
+
+        template = scanned.template
+        template.update!(fields: template.submitters.map do |party|
+          { 'uuid' => SecureRandom.uuid, 'submitter_uuid' => party['uuid'], 'type' => 'signature',
+            'name' => 'Signature',
+            'areas' => [{ 'x' => 0.1, 'y' => 0.5, 'w' => 0.3, 'h' => 0.05, 'page' => 0,
+                          'attachment_uuid' => template.schema.first['attachment_uuid'] }] }
+        end)
+        Desk::Questions.answer!(fix, '', user)
+        run_pipeline(scanned)
+
+        expect(scanned.state).to eq('ready_to_send')
+        expect(a_request(:post, DeskSpecHelpers::AI_URL)).to have_been_made.twice
+      end
+
+      it 'does the same when the AI does not answer' do
+        stub_request(:post, DeskSpecHelpers::AI_URL)
+          .to_return(status: 200, body: ai_reply('c-scanned-letter-au-1')).then.to_timeout
+
+        prepare(scanned)
+
+        expect(scanned.state).to eq('waiting_for_you')
+        expect(scanned.questions.open.sole.prompt).to start_with('The automatic placement stopped (')
+      end
+    end
+
     it 'is never made to an internal address' do
       allow(Desk::AiClient).to receive(:settings)
         .and_return(endpoint: 'https://ai.internal/v1', model: 'm', key: 'k', allow_internal: false)

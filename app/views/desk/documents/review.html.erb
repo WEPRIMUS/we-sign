@@ -58,6 +58,11 @@
             <input name="signer_title" value="<%= desk_settings.signer_titles[current_user.id.to_s] %>" class="base-input w-full" placeholder="Manager">
           </label>
         <% end %>
+        <label class="block text-sm">
+          <span class="block font-medium mb-1">Copy for information (not signing)</span>
+          <input name="copy_to" class="base-input w-full" placeholder="name@company.com" autocomplete="off">
+          <span class="block text-base-content/60 mt-1">Optional. E-mail addresses, separated by commas. Each is told it was sent, with the PDF, and gets the signed copy when everyone has signed.</span>
+        </label>
         <%= tag.button('Yes, send', class: 'base-button w-full', type: 'submit', disabled: @blockers.any?) %>
       <% end %>
       <div class="flex gap-2 mt-3">

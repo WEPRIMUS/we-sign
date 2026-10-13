@@ -94,18 +94,21 @@ module Desk
       send_copies!(document, submission, settings)
     end
 
-    # "Keep informed" (Desk settings): the signed copy and the audit record, as WE Sign's own completed e-mail, to each
-    # address on the list. A signer gets WE Sign's copy to signers already, so is not sent a second one. (Desk
-    # templates keep WE Sign's completed e-mail to the preparer off: the desk tells the sender itself, above.)
+    # "Keep informed" (Desk settings) and "Copy for information" (the document's review): the signed copy and the
+    # audit record, as WE Sign's own completed e-mail, to each address. A signer gets WE Sign's copy to signers
+    # already, so is not sent a second one. (Desk templates keep WE Sign's completed e-mail to the preparer off: the
+    # desk tells the sender itself, above.)
     def send_copies!(document, submission, settings)
       last = submission.submitters.reject(&:viewer?).max_by { |s| s.completed_at || Time.zone.at(0) }
       copied = signers_with_copy(submission, last)
       to = settings.keep_informed.reject { |address| copied.include?(address.downcase) }
-      return if to.empty?
+      copies = document.copy_to.reject { |address| to.any? { |listed| listed.casecmp?(address) } }
+      return if to.empty? && copies.empty?
 
       user = submission.created_by_user || submission.template.author
-      to.each { |address| SubmitterMailer.completed_email(last, user, to: address).deliver_later! }
-      document.log!('signed copy sent to the keep-informed list', actor: 'system', data: { to: })
+      (to + copies).each { |address| SubmitterMailer.completed_email(last, user, to: address).deliver_later! }
+      document.log!('signed copy sent to the keep-informed list', actor: 'system', data: { to: }) if to.any?
+      document.log!('signed copy sent for information', actor: 'system', data: { to: copies }) if copies.any?
     end
 
     # The addresses WE Sign sends its copy of the signed documents to, by its own rule (ProcessSubmitterCompletionJob).

@@ -37,7 +37,7 @@ namespace :desk do
     end
   end
 
-  desc 'Local trial only: writes the three synthetic test PDFs to a folder (own party: the brand pack legal name)'
+  desc 'Local trial only: writes the synthetic test PDFs to a folder (own party: the brand pack legal name)'
   task :synthetic_pdfs, %i[dir] => :environment do |_, args|
     desk_local_trial!
 

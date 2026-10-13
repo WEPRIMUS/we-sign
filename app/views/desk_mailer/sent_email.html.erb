@@ -1,3 +1,7 @@
 <p><%= @sender.full_name.presence || @sender.email %> sent '<%= @document.name %>' to <%= @signers.map { |s| s.name.presence || s.email }.to_sentence %><% if @document.client %> (<%= @document.client.legal_name %>)<% end %>.</p>
+<% if @for_information %>
+<p>For your information<%= ", the PDF is attached (#{@attached})" if @attached %>. You are not asked to sign it. When everyone has signed, you receive the signed copy.</p>
+<% else %>
 <p><a href="<%= desk_document_url(@document) %>">Open the document in the contract desk</a></p>
+<% end %>
 <p><%= @account.name %></p>

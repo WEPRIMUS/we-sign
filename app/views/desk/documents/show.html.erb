@@ -10,6 +10,7 @@
       <% if @document.client %><span>· <%= link_to @document.client.legal_name, desk_client_path(@document.client), class: 'hover:underline' %></span><% end %>
     </div>
   </div>
+  <% released = @document.submission && (@document.out_for_signature? || %w[signed declined expired].include?(@document.state)) %>
   <div class="flex flex-wrap items-center gap-2">
     <% case @document.state %>
     <% when 'ready_to_send' %>
@@ -23,6 +24,9 @@
     <% when 'signed' %>
       <%= form_with url: download_desk_document_path(@document, kind: 'signed'), method: :get, data: { turbo: false } do %><button class="base-button" type="submit">Download the signed PDF</button><% end %>
       <%= link_to 'Audit record', download_desk_document_path(@document, kind: 'audit'), class: 'white-button', data: { turbo: false } %>
+    <% end %>
+    <% if released %>
+      <%= link_to 'See signatures in WE Sign', submission_path(@document.submission), class: 'white-button' %>
     <% end %>
     <%= link_to 'Original file', download_desk_document_path(@document, kind: 'source'), class: 'white-button', data: { turbo: false } %>
     <% unless @document.out_for_signature? || @document.state == 'archived' %>
@@ -46,13 +50,16 @@
         <% end %>
       </div>
     <% elsif @document.template %>
+      <% if released %>
+        <p class="text-sm text-base-content/60 mb-2">This is the original file. Signatures are added in WE Sign.</p>
+      <% end %>
       <%= render 'desk/documents/pages', template: @document.template, with_boxes: !@document.out_for_signature? && @document.state != 'signed' %>
     <% else %>
       <div class="rounded-2xl bg-base-200 p-6 text-base-content/60">The pages appear here once the desk has prepared the document.</div>
     <% end %>
   </div>
   <div class="lg:col-span-2 space-y-6">
-    <% if @document.submission && (@document.out_for_signature? || %w[signed declined expired].include?(@document.state)) %>
+    <% if released %>
       <section class="rounded-2xl bg-base-200 p-5">
         <h2 class="text-lg font-bold mb-3">Signers</h2>
         <ul class="space-y-2 text-sm">
@@ -61,6 +68,9 @@
             <li class="flex justify-between gap-3"><span><%= submitter.name %> <span class="text-base-content/60"><%= submitter.email %></span></span><span class="badge <%= SubmissionsController::STATUS_BADGES[submitter.status] %> bg-opacity-50"><%= submitter.status.humanize %></span></li>
           <% end %>
         </ul>
+        <% if @document.copy_to.any? %>
+          <p class="text-sm mt-3">Copy for information: <%= @document.copy_to.join(', ') %></p>
+        <% end %>
         <p class="text-xs text-base-content/60 mt-3">Checked <%= desk_time(@document.checked_at) %><%= " · links expire #{desk_time(@document.expire_at)}" if @document.expire_at %><%= " · reminders sent on day #{@document.reminders_sent.join(', ')}" if @document.reminders_sent.any? %></p>
       </section>
     <% end %>

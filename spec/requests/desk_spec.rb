@@ -54,7 +54,10 @@ RSpec.describe 'Contract Desk', :desk do
       end
 
       get "/desk/documents/#{document.uuid}/review"
-      expect(response.body).to include('Can I send it?', 'Yes, send', 'Fix something', 'layla@saffron.example')
+      expect(response.body).to include('Can I send it?', 'Yes, send', 'Fix something', 'layla@saffron.example',
+                                       'Copy for information (not signing)')
+      get "/desk/documents/#{document.uuid}"
+      expect(response.body).not_to include('See signatures in WE Sign') # not sent yet
     end
   end
 
@@ -221,6 +224,33 @@ RSpec.describe 'Contract Desk', :desk do
       expect(flash[:alert]).to match(/not ready to send/)
     end
 
+    it 'invites the signers of the other party at the same moment, once our side has signed' do
+      with_two_factor(user)
+      save_signature!(user)
+      create(:encrypted_config, account:, key: EncryptedConfig::ESIGN_CERTS_KEY,
+                                value: GenerateCertificate.call.transform_values(&:to_pem))
+      stub_ai('c-scanned-letter-au-1', 'c-scanned-letter-au-2')
+      Desk::Client.create!(account_id: account.id, legal_name: 'Wattle Creek Minerals Pty Ltd',
+                           tax_number: '51 824 753 556', source: 'Added by hand',
+                           signers: [{ name: 'Hannah Reid', role: 'Director', email: 'hannah@wattle.example' },
+                                     { name: 'Tom Brennan', role: 'Company Secretary', email: 'tom@wattle.example' }])
+      letter = desk_upload(account:, user:, pdf: synthetic_pdf(:scanned_letter), filename: 'letter.pdf')
+      run_pipeline(letter)
+      letter.questions.open.each { |q| Desk::Questions.answer!(q, DeskSpecHelpers::ANSWERS.fetch(q.kind), user) }
+      run_pipeline(letter)
+      expect(letter.template.submitters.pluck('order')).to eq([0, 1, 1])
+      sign_in(user)
+
+      post "/desk/documents/#{letter.uuid}/approve", params: { signer_title: 'Manager' }
+      own = letter.reload.submission.submitters.find_by(email: user.email)
+      expect(SendSubmitterInvitationEmailJob.jobs).to be_empty # our side signs first
+      ProcessSubmitterCompletionJob.new.perform('submitter_id' => own.id)
+
+      invited = SendSubmitterInvitationEmailJob.jobs.pluck('args').flatten.pluck('submitter_id')
+      expect(Submitter.where(id: invited).pluck(:email))
+        .to contain_exactly('hannah@wattle.example', 'tom@wattle.example')
+    end
+
     it 'sends the invitation itself when the sender does not sign on approval' do
       Desk::Setting.for(account).update!(sender_signs_on_approval: false)
       with_two_factor(user)
@@ -280,6 +310,13 @@ RSpec.describe 'Contract Desk', :desk do
       expect(document.reload.expiry_warned_at).to be_present
     end
 
+    it 'links the card to the signatures in WE Sign, and says the preview is the original file' do
+      get "/desk/documents/#{document.uuid}"
+
+      expect(response.body).to include('See signatures in WE Sign', %(href="/submissions/#{document.submission.id}"),
+                                       'This is the original file. Signatures are added in WE Sign.')
+    end
+
     it 'fetches the signed PDF and the audit record into the register and tells the sender' do
       create(:encrypted_config, account:, key: EncryptedConfig::ESIGN_CERTS_KEY,
                                 value: GenerateCertificate.call.transform_values(&:to_pem))
@@ -328,15 +365,17 @@ RSpec.describe 'Contract Desk', :desk do
       ActionMailer::Base.deliveries
     end
 
-    def send_document
+    def send_document(**params)
       sign_in(user)
-      post "/desk/documents/#{document.uuid}/approve", params: { signer_title: 'Manager' }
+      post "/desk/documents/#{document.uuid}/approve", params: { signer_title: 'Manager', **params }
       document.reload
     end
 
     def client_signs!
-      create(:encrypted_config, account:, key: EncryptedConfig::ESIGN_CERTS_KEY,
-                                value: GenerateCertificate.call.transform_values(&:to_pem))
+      unless EncryptedConfig.exists?(account:, key: EncryptedConfig::ESIGN_CERTS_KEY)
+        create(:encrypted_config, account:, key: EncryptedConfig::ESIGN_CERTS_KEY,
+                                  value: GenerateCertificate.call.transform_values(&:to_pem))
+      end
       theirs = document.submission.submitters.find { |s| s.email == 'layla@saffron.example' }
       signature = ActiveStorage::Attachment.create!(
         blob: ActiveStorage::Blob.create_and_upload!(io: Rails.root.join('spec/fixtures/sample-image.png').open,
@@ -417,6 +456,64 @@ RSpec.describe 'Contract Desk', :desk do
       expect(document.events.pluck(:action)).to include('signed copy sent to the keep-informed list')
     end
 
+    describe 'a copy for information' do
+      before do
+        create(:encrypted_config, account:, key: EncryptedConfig::ESIGN_CERTS_KEY,
+                                  value: GenerateCertificate.call.transform_values(&:to_pem))
+      end
+
+      it 'refuses what is not an e-mail address, and sends nothing' do
+        send_document(copy_to: 'observer@northwind.example, not-an-address')
+
+        expect(flash[:alert]).to eq('Copy for information: not an e-mail address: not-an-address')
+        expect(document.state).to eq('ready_to_send')
+        expect(document.submission.submitters.map(&:completed_at)).to all(be_nil)
+        expect(queued_mail).to be_empty
+      end
+
+      it 'tells each address it was sent, with the PDF signed on our side, leaving out signers and the list' do
+        send_document(copy_to: 'Observer@northwind.example; layla@saffron.example, partner@northwind.example ' \
+                               "#{user.email} observer@northwind.example")
+
+        expect(document.copy_to).to eq(['observer@northwind.example'])
+        notices = queued_mail.select { |m| m.subject == "Sent: #{document.name}" }
+        expect(notices.flat_map(&:to).tally).to eq('partner@northwind.example' => 1, 'observer@northwind.example' => 1)
+        copy = notices.find { |m| m.to == ['observer@northwind.example'] }
+        expect(copy.attachments.size).to eq(1)
+        expect(copy.attachments.first.body.decoded).to start_with('%PDF')
+        expect(copy.attachments.first.body.decoded).not_to eq(document.source_file.download) # signed on our side
+        expect(Nokogiri::HTML(copy.html_part.body.decoded).text).to include('as sent, signed on our side')
+        expect(copy.html_part.body.decoded).not_to include('/desk/documents/') # no link into the desk
+        expect(notices.find { |m| m.to == ['partner@northwind.example'] }.attachments).to be_empty
+        expect(document.events.pluck(:action)).to include('copy for information sent')
+
+        get "/desk/documents/#{document.uuid}"
+        expect(response.body).to include('Copy for information: observer@northwind.example')
+      end
+
+      it 'attaches the original when our side has not signed' do
+        document.update!(sent_by_user: user, sent_at: Time.current)
+
+        mail = DeskMailer.sent_email(document, 'observer@northwind.example', attach: true)
+
+        expect(mail.attachments.sole.body.decoded).to eq(document.source_file.download)
+        expect(Nokogiri::HTML(mail.html_part.body.decoded).text).to include('the document as sent')
+      end
+
+      it 'sends each the signed copy and the audit record when everyone has signed, once' do
+        send_document(copy_to: 'observer@northwind.example')
+
+        client_signs!
+
+        copies = queued_mail.select { |m| m.attachments.any? }
+        expect(copies.flat_map(&:to).tally).to eq('partner@northwind.example' => 1, 'observer@northwind.example' => 1,
+                                                  'layla@saffron.example' => 1, user.email => 1)
+        expect(copies.find { |m| m.to == ['observer@northwind.example'] }.attachments.map(&:filename))
+          .to include(match(/audit/i))
+        expect(document.events.pluck(:action)).to include('signed copy sent for information')
+      end
+    end
+
     it 'sends the list the signed copy even when WE Sign sends no copy to signers' do
       create(:account_config, account:, key: AccountConfig::SUBMITTER_DOCUMENTS_COPY_EMAIL_KEY,
                               value: { 'enabled' => false })
@@ -427,6 +524,90 @@ RSpec.describe 'Contract Desk', :desk do
 
       copies = queued_mail.select { |m| m.attachments.any? }
       expect(copies.flat_map(&:to).tally).to eq('partner@northwind.example' => 1, 'layla@saffron.example' => 1)
+    end
+  end
+
+  describe 'the invitation e-mail' do
+    def invitation(document)
+      theirs = document.submission.submitters.find { |s| s.email == 'layla@saffron.example' }
+      mail = SubmitterMailer.invitation_email(theirs)
+
+      [mail.subject, Nokogiri::HTML((mail.html_part || mail).body.decoded).text.squish]
+    end
+
+    it 'greets each signer by first name and names the document and the sender' do
+      document = ready_document
+
+      subject, text = invitation(document)
+
+      expect(subject).to eq("#{account.name}: #{document.name}, for your signature")
+      expect(text).to start_with('Hi Layla,')
+      expect(text).to include("#{user.full_name} of #{account.name} has sent you \"#{document.name}\" for your " \
+                              'signature.', 'Review and sign')
+    end
+
+    it 'is edited in Desk settings, beside its variables, for the documents prepared after' do
+      sign_in(user)
+      get '/desk/settings/edit'
+      expect(response.body).to include('Invitation e-mail', '{{submitter.first_name}}', '{{template.name}}')
+
+      patch '/desk/settings', params: { setting: { invitation_subject: 'Please sign: {{template.name}}',
+                                                   invitation_body: "Dear {{submitter.first_name}},\r\n\r\n" \
+                                                                    '{{submitter.link}}' } }
+      expect(Desk::Setting.for(account).invitation_subject).to eq('Please sign: {{template.name}}')
+      desk_settings_for(account, sender_signs_on_approval: true) # the rest of the form, as it was
+      document = ready_document
+
+      subject, text = invitation(document)
+      expect(subject).to eq("Please sign: #{document.name}")
+      expect(text).to start_with('Dear Layla,')
+    end
+
+    it 'stores nothing for the desk text as it is, so that the default stays the desk own' do
+      sign_in(user)
+
+      body = Desk::Setting::INVITATION_BODY.gsub("\n", "\r\n") # as a browser sends a text area
+      patch '/desk/settings', params: { setting: { invitation_subject: Desk::Setting::INVITATION_SUBJECT,
+                                                   invitation_body: body } }
+
+      expect(Desk::Setting.for(account).attributes.values_at('invitation_subject', 'invitation_body')).to eq([nil, nil])
+    end
+
+    it 'keeps what was set for the document itself in WE Sign' do
+      document = ready_document
+      template = document.template
+      template.update!(preferences: template.preferences.merge('request_email_subject' => 'Our words'))
+
+      expect(invitation(document).first).to eq('Our words')
+    end
+  end
+
+  describe 'e-mail that does not go out' do
+    it 'is recorded, though the app raises no delivery error, and shown on the desk home until one goes out' do
+      mail = Mail.new(from: 'desk@northwind.example', to: 'someone@northwind.example', subject: 'Test', body: 'Test')
+      mail.delivery_method(:smtp, address: '127.0.0.1', port: 1, enable_starttls: false, open_timeout: 2)
+      mail.raise_delivery_errors = false
+
+      expect { mail.deliver }.not_to raise_error
+
+      settings = Desk::Setting.for(account)
+      expect(settings.reload.mail_error).to eq('Errno::ECONNREFUSED')
+      sign_in(user)
+      get '/desk'
+      expect(response.body).to include('E-mails are not going out since', '(Errno::ECONNREFUSED)',
+                                       'href="/settings/email"')
+
+      first = settings.mail_failed_at
+      failing = Class.new { def deliver!(_mail) = raise(Net::ReadTimeout) }.prepend(Desk::MailHealth::Delivery)
+      travel(1.hour) { expect { failing.new.deliver!(mail) }.to raise_error(Net::ReadTimeout) }
+      expect(settings.reload.attributes.values_at('mail_failed_at', 'mail_error')).to eq([first, 'Net::ReadTimeout'])
+
+      going_out = Class.new { def deliver!(_mail) = :sent }.prepend(Desk::MailHealth::Delivery)
+      going_out.new.deliver!(mail)
+
+      expect(settings.reload.attributes.values_at('mail_failed_at', 'mail_error')).to eq([nil, nil])
+      get '/desk'
+      expect(response.body).not_to include('E-mails are not going out')
     end
   end
 end

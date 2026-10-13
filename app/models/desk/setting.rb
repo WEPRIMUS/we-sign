@@ -10,6 +10,23 @@ module Desk
     PROFILE_KEYS = %w[legal_name address place country licence_number licence_expiry tax_number signer_name
                       signer_title signer_email document_prefix vat_rate].freeze
 
+    # The invitation e-mail of a desk document, unless Desk settings give another. WE Sign fills the variables when
+    # it sends; a document's own e-mail settings in WE Sign win over these.
+    INVITATION_SUBJECT = '{{account.name}}: {{template.name}}, for your signature'
+    INVITATION_BODY = <<~BODY
+      Hi {{submitter.first_name}},
+
+      {{sender.name}} of {{account.name}} has sent you "{{template.name}}" for your signature.
+
+      [Review and sign]({{submitter.link}})
+
+      Please reply to this e-mail if you have any questions.
+
+      Thank you,
+      {{sender.name}}
+      {{account.name}}
+    BODY
+
     belongs_to :account
 
     attribute :approver_user_ids, default: -> { [] }
@@ -44,15 +61,21 @@ module Desk
       normalized.present? && own_names.any? { |own| Normalize.same_company?(Normalize.name(own), normalized) }
     end
 
-    # The default signer of the profile, when the given printed name is that person (or no name is printed).
+    # The default signer of the profile, when the given printed name is that person, written in full or shorter
+    # (or no name is printed).
     def profile_signer_for(name)
       return if profile['signer_name'].blank?
-      return if name.present? && Normalize.person(name) != Normalize.person(profile['signer_name'])
+      return if name.present? && !Normalize.same_person?(name, profile['signer_name'])
 
       { 'name' => profile['signer_name'], 'title' => profile['signer_title'], 'email' => profile['signer_email'] }
     end
 
     def vat_rate = BigDecimal(profile['vat_rate'].presence || '0')
+
+    def invitation_email
+      { 'request_email_subject' => invitation_subject.presence || INVITATION_SUBJECT,
+        'request_email_body' => invitation_body.presence || INVITATION_BODY }
+    end
 
     # With "approval required" off, every signed-in person of the account may say "Yes, send".
     def may_send?(user)

@@ -28,7 +28,10 @@ module Desk
                     FieldPlacement.call(attachment:, data:, slots:, parties: Signers.parties(document))
                   end
 
-      template.update!(submitters: slots.map { |s| { 'name' => s.label, 'uuid' => s.uuid } }, fields: placement.fields)
+      # One order group per party, in signing order (ours first): the signers of one party are invited together.
+      groups = slots.map(&:party_key).uniq
+      submitters = slots.map { |s| { 'name' => s.label, 'uuid' => s.uuid, 'order' => groups.index(s.party_key) } }
+      template.update!(submitters:, fields: placement.fields)
       document.log!('boxes placed', actor: 'system', data: { fields: placement.fields.size, notes: placement.notes,
                                                              problems: placement.problems })
 
@@ -78,12 +81,14 @@ module Desk
     end
 
     # WE Sign's completed e-mail (and its bcc) stays off: the desk tells the sender itself, and sends the signed copy
-    # to the "Keep informed" list of Desk settings (Desk::FollowUp).
+    # to the "Keep informed" list of Desk settings (Desk::FollowUp). The invitation e-mail is the one of Desk
+    # settings; a change made to it later in WE Sign (the document's e-mail settings) is kept.
     def create_template!(document, user)
       template = Template.create!(
         account_id: document.account_id, author: user, name: document.name.truncate(200),
         folder: TemplateFolders.find_or_create_by_name(user, FOLDER),
-        preferences: { 'submitters_order' => 'preserved', 'completed_notification_email_enabled' => false }
+        preferences: { 'submitters_order' => 'preserved', 'completed_notification_email_enabled' => false,
+                       **Setting.for(document.account).invitation_email }
       )
 
       Tempfile.create(['desk', '.pdf'], binmode: true) do |file|

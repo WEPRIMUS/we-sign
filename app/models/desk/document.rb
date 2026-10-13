@@ -39,6 +39,7 @@ module Desk
 
     attribute :uuid, :string, default: -> { SecureRandom.uuid }
     attribute :reminders_sent, default: -> { [] }
+    attribute :copy_to, default: -> { [] }
 
     validates :state, inclusion: STATES
     validates :file_sha256, presence: true

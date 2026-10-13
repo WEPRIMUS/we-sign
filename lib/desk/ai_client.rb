@@ -36,8 +36,9 @@ module Desk
     def endpoint_host = settings[:endpoint] && Addressable::URI.parse(settings[:endpoint]).host
 
     # Sends chat messages and returns the reply parsed as a JSON object. Bounded: ATTEMPTS tries on timeouts, rate
-    # limits and server errors, then Error. Never returns an empty or made-up result.
-    def chat_json(messages, max_tokens: 16_000)
+    # limits and server errors, then Error. Never returns an empty or made-up result. partial: true also takes a reply
+    # cut off by the length limit, up to its last complete element (for a caller that checks what is missing).
+    def chat_json(messages, max_tokens: 16_000, partial: false)
       config = settings
 
       unless configured?
@@ -50,7 +51,7 @@ module Desk
       body = { model: config[:model], temperature: 0, max_tokens:, response_format: { type: 'json_object' },
                messages: }.to_json
 
-      Automation.run { parse(post(uri, body, config[:key])) }
+      Automation.run { parse(post(uri, body, config[:key]), partial:) }
     end
 
     def guard!(uri, allow_internal:)
@@ -92,17 +93,72 @@ module Desk
 
     def retry_wait(attempt) = 2 * attempt
 
-    def parse(raw)
+    def parse(raw, partial: false)
       content = JSON.parse(raw).dig('choices', 0, 'message', 'content').to_s
-      content = content.strip.delete_prefix('```json').delete_prefix('```').delete_suffix('```').strip
 
-      result = JSON.parse(content)
+      result = json_object(content, partial:)
 
       raise Error, 'The AI reply was not a JSON object' unless result.is_a?(Hash)
 
       result
     rescue JSON::ParserError
       raise Error, 'The AI reply could not be read'
+    end
+
+    # The JSON object of a reply as models write it: bare, in a ```json fence, with words before or after it.
+    def json_object(content, partial: false)
+      text = content[/```(?:json)?\s*(.*?)(?:```|\z)/m, 1] || content
+      start = text.index('{')
+      return JSON.parse(text) unless start
+
+      text = text[start..]
+      last = text.rindex('}')
+
+      [text, (text[..last] if last)].compact.uniq.each do |candidate|
+        return JSON.parse(candidate)
+      rescue JSON::ParserError
+        next
+      end
+
+      partial ? close_cut_reply(text) : raise(JSON::ParserError, 'not one JSON object')
+    end
+
+    # A reply cut off by the length limit, closed after its last complete element:
+    # {"boxes": [{"id": 1}, {"id": 2}, {"id": becomes {"boxes": [{"id": 1}, {"id": 2}]}.
+    def close_cut_reply(text)
+      ends = (0...text.size).select { |i| text[i] == '}' }.last(50)
+
+      ends.reverse_each do |i|
+        closing = closing_brackets(text[..i])
+        return JSON.parse(text[..i] + closing) if closing
+      rescue JSON::ParserError
+        next
+      end
+
+      raise JSON::ParserError, 'cut off before a complete element'
+    end
+
+    # The brackets that close what is open at the end of text, or nil when it ends inside a string.
+    def closing_brackets(text)
+      open = []
+      quoted = escaped = false
+
+      text.each_char do |char|
+        if escaped
+          escaped = false
+        elsif quoted
+          escaped = char == '\\'
+          quoted = char != '"'
+        elsif char == '"'
+          quoted = true
+        elsif '{['.include?(char)
+          open << char
+        elsif '}]'.include?(char)
+          open.pop
+        end
+      end
+
+      open.reverse.map { |char| char == '{' ? '}' : ']' }.join unless quoted
     end
 
     def error_text(response)

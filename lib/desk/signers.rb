@@ -8,14 +8,14 @@ module Desk
     # approver: the own party's signer signs at the moment of "Yes, send": anyone who approves when no name is printed
     # (signer_user_id nil), otherwise only the WE Sign user the document names (signer_user_id).
     Slot = Struct.new(:key, :party_key, :party_name, :own, :approver, :name, :title, :email, :uuid,
-                      :signer_user_id) do
+                      :signer_user_id, :label_suffix) do
       def description = name.present? ? "#{name} (#{party_name})" : "the signer for #{party_name}"
 
       # Does this person's "Yes, send" sign for the own party?
       def signed_by?(user) = approver && (signer_user_id.nil? || signer_user_id == user.id)
 
       # The name of the signing party in WE Sign.
-      def label = own ? party_name : [party_name, title.presence || name].compact_blank.join(' - ')
+      def label = own ? party_name : [party_name, label_suffix || title.presence || name].compact_blank.join(' - ')
     end
 
     module_function
@@ -30,7 +30,7 @@ module Desk
         (acc[fact.value['slot']] ||= {}).merge!(fact.value.compact_blank)
       end
 
-      parties(document).flat_map do |party|
+      slots = parties(document).flat_map do |party|
         lines = signers.select { |s| s['party_key'] == party['key'] }
 
         if party['own']
@@ -41,6 +41,22 @@ module Desk
           end
         end
       end
+
+      distinct_labels(slots)
+    end
+
+    # Two signers of one party never share a label in WE Sign: each is named ("<Party> - <Name>"), or numbered when
+    # no name is known ("<Party> - Director 1", "<Party> - Director 2").
+    def distinct_labels(slots)
+      slots.group_by(&:label).each_value do |same|
+        next if same.size < 2
+
+        same.each_with_index do |slot, index|
+          slot.label_suffix = slot.name.presence || "#{slot.title.presence || 'Signer'} #{index + 1}"
+        end
+      end
+
+      slots
     end
 
     def client_slot(document, party, line, index, answers)
@@ -63,11 +79,13 @@ module Desk
     # The installation's own party (never a question: what is not in the document comes from the own profile).
     # With "sender signs on approval": no printed name, whoever says "Yes, send" signs; a printed name that is a
     # WE Sign user, only that person signs on approval; a printed name that is not a user is invited by e-mail.
+    # A printed name is that user when it is the user's full name, or when it is the name of the signatory of
+    # Our company (Desk settings, written shorter or longer) whose e-mail is that user's.
     def own_slot(document, party, line, _answers, settings)
       key = 'own-1'
       printed = line['name'].presence
       profile = settings.profile_signer_for(printed) || {}
-      user = user_named(document, printed)
+      user = user_named(document, printed) || (printed && user_with_email(document, profile['email']))
       base = { key:, party_key: party['key'], party_name: party['legal_name'], own: true, uuid: uuid(document, key) }
 
       if settings.sender_signs_on_approval && (printed.nil? || user)
@@ -86,6 +104,12 @@ module Desk
       User.active.where(account_id: document.account_id).find do |u|
         Normalize.person(u.full_name) == Normalize.person(name)
       end
+    end
+
+    def user_with_email(document, email)
+      return if email.blank?
+
+      User.active.find_by(account_id: document.account_id, email: email.to_s.strip.downcase)
     end
 
     # Our own signer must be reachable: a WE Sign user or the profile's e-mail. Not asked: it is configuration.
